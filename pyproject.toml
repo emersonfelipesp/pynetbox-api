@@ -1,0 +1,13 @@
+[project]
+name = "pynetbox-api"
+version = "0.0.1"
+description = "pynetbox API"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiohttp>=3.11.11",
+    "fastapi[standard]",
+    "pynetbox>=7.4.1",
+    "requests>=2.32.3",
+    "typer>=0.15.1",
+]
