@@ -61,17 +61,45 @@ unique_together: dict = {
 
 
 class NetBoxBase:
-    def __new__(cls, **kwargs):
+    def __new__(cls, placeholder: bool, **kwargs):
         # Create a new instance of the class
         instance = super().__new__(cls)
         
-        # Check if the instance is being created with arguments
-        if kwargs: 
+        if placeholder or kwargs:
+            print('Initialize attributes')
             # Initialize attributes
             instance.app = ''
             instance.name = ''
             instance.schema = None
-            unique_together: list = []
+            instance.schema_in = None
+            instance.schema_list = None
+            instance.unique_together = []
+            
+            print('placeholder', placeholder)
+            print('instance.schema_in', instance.schema_in)
+        
+        
+        if placeholder and instance.schema_in:
+            # Parse Pydantic Schema to JSON and construct the JSON object to be used as payload.
+            try:
+                json_in: dict = {}
+                json_schema = instance.schema_in.model_json_schema()
+                for key, value in json_schema['properties'].items():
+                    for key, value in value.items():
+                        default_value = value.get('default', None)
+                        if default_value:
+                            json_in[key] = value.get('default')
+                            
+                print('json_in', json_in)
+                return instance.post(json_in)
+            except Exception as error:
+                raise FastAPIException(
+                    message=f'Error to create placeholder object {instance.app}.{instance.name}',
+                    python_exception=str(error)
+                )
+                    
+        # Check if the instance is being created with arguments
+        if kwargs: 
             instance.object = getattr(getattr(nb, cls.app), cls.name)
             
             # Return post method result as the class instance
@@ -91,7 +119,9 @@ class NetBoxBase:
     
     app: str = ''
     name: str = ''
-    schema: None
+    schema = None
+    schema_in = None
+    schema_list = None
     unique_together: list = []
     
     

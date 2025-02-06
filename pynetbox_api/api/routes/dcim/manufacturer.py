@@ -8,7 +8,7 @@ from pynetbox_api.schemas.dcim.manufacturer import (
     ManufacturerSchemaIn
 ) 
 
-manufacturer_router = APIRouter()
+manufacturer_router = APIRouter(tags=['DCIM / Manufacturer'])
 
 @manufacturer_router.get('/', response_model=ManufacturerSchemaList)
 async def get_manufacturers() -> ManufacturerSchemaList:

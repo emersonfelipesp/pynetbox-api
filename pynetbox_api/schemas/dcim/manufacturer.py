@@ -23,9 +23,9 @@ class ManufacturerSchema(BaseModel):
     last_updated: str | None = None
 
 class ManufacturerSchemaIn(BaseModel):
-    name: str
-    slug: str
-    description: str | None = None
+    name: str = 'Manufacturer Placeholder'
+    slug: str = 'manufacturer-placeholder'
+    description: str = 'Manufacturer Placeholder Description'
     tags: List[int] | None = None
 
 ManufacturerSchemaList = RootModel[List[ManufacturerSchema]]
