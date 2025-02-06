@@ -1,6 +1,8 @@
 import requests
 import urllib3
 import pynetbox
+
+from fastapi.responses import JSONResponse
 from pynetbox_api.exceptions import FastAPIException
 
 import os
@@ -11,7 +13,6 @@ load_dotenv()
 NETBOX_URL = os.getenv('NETBOX_URL')
 NETBOX_TOKEN = os.getenv('NETBOX_TOKEN')
 
-print(NETBOX_URL, NETBOX_TOKEN)
 urllib3.disable_warnings()
 
 session = requests.Session()
@@ -216,3 +217,85 @@ class NetBoxBase:
             return result
         else:
             return duplicate
+    
+    def update(self, id: int, json: dict):
+        try:
+            if self.object.get(id).update(json):
+                raise FastAPIException(
+                    message=f'Object {self.app}.{self.name} with ID {id} changed successfully.',
+                    status_code=200
+                )
+            else:
+                raise FastAPIException(
+                    message=f'Object {self.app}.{self.name} with ID {id} not found or change (PUT) failed.',
+                    status_code=404
+                )
+                
+        except FastAPIException:
+            raise
+        
+        except pynetbox.core.query.RequestError as error:
+            msg: str = f'Error to update object {self.app}.{self.name}'
+            raise FastAPIException(
+                message=msg,
+                detail=f'Payload provided: {json}',
+                python_exception=str(error)
+            )
+        
+        except Exception as error:
+            msg: str = f'Error to update object {self.app}.{self.name}'
+            raise FastAPIException(
+                message=msg,
+                detail=f'Payload provided: {json}',
+                python_exception=str(error)
+            )
+    
+    def delete(self, id: int):
+        try:
+            search_object = self.object.get(id)
+            if search_object:
+                if search_object.delete():
+                    raise FastAPIException(
+                        message=f'Object {self.app}.{self.name} with ID {id} deleted successfully.',
+                        status_code=200
+                    )
+
+                raise FastAPIException(
+                    message=f'Object {self.app}.{self.name} with ID {id} removal failed.',
+                    status_code=404
+                )
+            else:
+                raise FastAPIException(
+                    message=f'Object {self.app}.{self.name} with ID {id} not found.',
+                    status_code=404
+                )
+                
+        except FastAPIException:
+            raise
+
+        except pynetbox.core.query.RequestError as error:
+            msg: str = f'Error to delete object {self.app}.{self.name}\nError: {str(error)}\nPayload provided: {id}'
+            raise FastAPIException(
+                message=msg,
+                python_exception=str(error)
+            )
+
+        except Exception as error:
+            msg: str = f'Error to delete object {self.app}.{self.name} with ID: {id}'
+            raise FastAPIException(
+                message=msg,
+                python_exception=str(error)
+            )
+    
+    def all(self):
+        try:
+            if self.schema:
+                return [self.schema(**dict(object)) for object in self.object.all()]
+            else:
+                return self.object.all()
+        except Exception as error:
+            msg: str = f'Error to get all objects {self.app}.{self.name}'
+            raise FastAPIException(
+                message=msg,
+                python_exception=str(error)
+            )
