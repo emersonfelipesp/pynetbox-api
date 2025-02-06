@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 import os
 
-from .netbox import nb
+from .session import nb
 
 # Load environment variables from .env file
 load_dotenv()
