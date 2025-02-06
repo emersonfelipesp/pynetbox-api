@@ -10,12 +10,19 @@ app.include_router(netbox_router)
 
 @app.exception_handler(FastAPIException)
 async def fastapi_exception_handler(request, exc):
+    content: dict = {}
+    if exc.message:
+        content['message'] = exc.message
+    if exc.detail:
+        content['detail'] = exc.detail
+    if exc.python_exception:
+        content['python_exception'] = exc.python_exception
+    
+
     return JSONResponse(
-        status_code=400,
-        content={
-            'error': exc.message,
-            'python_exception': exc.python_exception
-        })
+        status_code=exc.status_code,
+        content=content
+    )
 
 @app.get('/')
 async def homepage():
