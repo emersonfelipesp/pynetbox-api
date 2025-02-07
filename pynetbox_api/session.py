@@ -61,7 +61,7 @@ unique_together: dict = {
 
 
 class NetBoxBase:
-    def __new__(cls, use_placeholder: bool, **kwargs):
+    def __new__(cls, use_placeholder: bool | None = None, **kwargs):
         # Create a new instance of the class
         instance = super().__new__(cls)
         
@@ -82,7 +82,7 @@ class NetBoxBase:
             # Return the instance as is if not being created with arguments
             return instance
         
-    def __init__(self, use_placeholder: bool, **kwargs):
+    def __init__(self, use_placeholder: bool | None = None, **kwargs):
         # Only initialize if the instance is being created (not when post method is used)
         if not kwargs:
             try:
