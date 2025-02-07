@@ -25,7 +25,7 @@ async def create_tag(tag: TagsSchemaIn) -> TagsSchema:
 
 @extras_router.post('/tags/placeholder')
 async def create_tag_placeholder(use_placeholder: Annotated[bool | None, Query()] = True) -> TagsSchema:
-    return Tags(use_placeholder=use_placeholder)
+    return Tags(use_placeholder=use_placeholder).object
 
 @extras_router.put('/tags/{tag_id}')
 async def update_tag(tag_id: int, tag: TagsSchema) -> JSONResponse:

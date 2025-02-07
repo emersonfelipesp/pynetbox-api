@@ -64,7 +64,7 @@ class NetBoxBase:
     def __new__(cls, use_placeholder: bool, **kwargs):
         # Create a new instance of the class
         instance = super().__new__(cls)
-        print('Initializing instance 1')
+        
         # Check if the instance is being created with arguments
         if kwargs and not use_placeholder: 
             # Initialize attributes
@@ -75,7 +75,7 @@ class NetBoxBase:
             instance.schema_list = None
             instance.unique_together = []
             instance.object = getattr(getattr(nb, cls.app), cls.name)
-            print('Initializing instance 2')
+            
             # Return post method result as the class instance
             return instance.post(kwargs)
         else:
@@ -84,7 +84,6 @@ class NetBoxBase:
         
     def __init__(self, use_placeholder: bool, **kwargs):
         # Only initialize if the instance is being created (not when post method is used)
-        print('Initializing instance')
         if not kwargs:
             try:
                 self.object = getattr(getattr(nb, self.app), self.name)
@@ -95,12 +94,12 @@ class NetBoxBase:
         if self.use_placeholder:
             # Parse Pydantic Schema to JSON and construct the JSON object to be used as payload.
             try:
-                self.placeholder_object: dict = {}
+                self.placeholder_dict: dict = {}
                 json_schema = self.schema_in.model_json_schema()
                 for key, value in json_schema['properties'].items():
                     default_value = value.get('default', None)
                     if default_value:
-                        self.placeholder_object[key] = value.get('default')
+                        self.placeholder_dict[key] = value.get('default')
                 
             except Exception as error:
                 raise FastAPIException(
@@ -108,6 +107,8 @@ class NetBoxBase:
                     python_exception=str(error)
                 )
 
+        if self.use_placeholder and self.placeholder_dict:
+            self.object = self.post(self.placeholder_dict)
 
     
     app: str = ''
@@ -146,59 +147,40 @@ class NetBoxBase:
                 else:
                     search_dict[field] = json.get(field)
                 
-                duplicate = self.get(multiple_values=search_dict)
-            else:
-                duplicate = self.get(value=json.get(self.unique_together[0]))
-            
+                duplicate = self.get(**search_dict)
             if not duplicate:
                 return None
             
             if self.schema:
-                return self.schema(**dict(duplicate))
+                return self.schema(**dict(duplicate)).model_dump()
             else:
                 return dict(duplicate)
             
         except Exception as error:
-            print(error)
             return None
     
     def get(
         self,
-        value: str = '',
-        multiple_values: dict = [],
-        id: int = 0
+        id: int = 0,
+        **kwargs
     ):
         try:
             if id:
                 return self.object.get(id)
-            if multiple_values:
+            if kwargs:
                 try:
-                    return self.object.get(**multiple_values)
+                    return self.object.get(**kwargs)
                 except ValueError:
-                    print('Error to get object, multiple objects found. Returning the first one.')
-                    print(multiple_values, self.app, self.name)
                     try:
-                        for first_object in self.object.filter(**multiple_values):
+                        for first_object in self.object.filter(**kwargs):
                             return first_object
                         
                     except pynetbox.core.query.RequestError as error:
-                        msg: str = f'Error to get object {self.app}.{self.name}\nError: {str(error)}\nPayload provided: {multiple_values}'
+                        msg: str = f'Error to get object {self.app}.{self.name}\nError: {str(error)}\nPayload provided: {kwargs}'
                         raise FastAPIException(
                             message=msg,
                             python_exception=str(error)
                         )
-                        
-            if self.name == ('interfaces' or 'module_bays'):
-                if not id:
-                        return self.object.filter(name=value)
-            if self.unique_together == 'name':
-                return self.object.get(name=value)
-            if self.unique_together == 'model':
-                return self.object.get(model=value)
-            if self.unique_together == 'address':
-                return self.object.get(address=value) 
-            if self.unique_together == 'ssid':
-                return self.object.get(ssid=value) 
                 
         except requests.exceptions.ConnectionError as error:
             msg: str = f'Connection error to Netbox API ({NETBOX_URL}). Failed to get object {self.app}.{self.name}.'
@@ -219,8 +201,8 @@ class NetBoxBase:
         def create_object(object, json):
             try:
                 # Create placeholder object if 'use_placeholder' is True
-                if self.use_placeholder and self.placeholder_object:
-                    result_object = dict(object.create(**self.placeholder_object))
+                if self.use_placeholder and self.placeholder_dict:
+                    result_object = dict(object.create(**self.placeholder_dict))
                     
                 # Create object with provided json
                 else:
@@ -244,11 +226,12 @@ class NetBoxBase:
         # If the object is a interface or module_bay, it will check if the interface or module_bay already exists
         # by using the device id, if it exists, it will return the object, if not, it will create the object
         duplicate = self._check_duplicate(json)
-        if duplicate is None:
-            result = create_object(object=self.object, json=json)
-            return result
-        else:
+        if duplicate:
             return duplicate
+        
+        result = create_object(object=self.object, json=json)
+        return result
+ 
     
     def update(self, id: int, json: dict):
         try:
