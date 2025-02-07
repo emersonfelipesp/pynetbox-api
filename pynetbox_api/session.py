@@ -61,12 +61,12 @@ unique_together: dict = {
 
 
 class NetBoxBase:
-    def __new__(cls, placeholder: bool, **kwargs):
+    def __new__(cls, use_placeholder: bool, **kwargs):
         # Create a new instance of the class
         instance = super().__new__(cls)
-        
-        if placeholder or kwargs:
-            print('Initialize attributes')
+        print('Initializing instance 1')
+        # Check if the instance is being created with arguments
+        if kwargs and not use_placeholder: 
             # Initialize attributes
             instance.app = ''
             instance.name = ''
@@ -74,47 +74,40 @@ class NetBoxBase:
             instance.schema_in = None
             instance.schema_list = None
             instance.unique_together = []
-            
-            print('placeholder', placeholder)
-            print('instance.schema_in', instance.schema_in)
-        
-        
-        if placeholder and instance.schema_in:
-            # Parse Pydantic Schema to JSON and construct the JSON object to be used as payload.
-            try:
-                json_in: dict = {}
-                json_schema = instance.schema_in.model_json_schema()
-                for key, value in json_schema['properties'].items():
-                    for key, value in value.items():
-                        default_value = value.get('default', None)
-                        if default_value:
-                            json_in[key] = value.get('default')
-                            
-                print('json_in', json_in)
-                return instance.post(json_in)
-            except Exception as error:
-                raise FastAPIException(
-                    message=f'Error to create placeholder object {instance.app}.{instance.name}',
-                    python_exception=str(error)
-                )
-                    
-        # Check if the instance is being created with arguments
-        if kwargs: 
             instance.object = getattr(getattr(nb, cls.app), cls.name)
-            
+            print('Initializing instance 2')
             # Return post method result as the class instance
             return instance.post(kwargs)
         else:
             # Return the instance as is if not being created with arguments
             return instance
         
-    def __init__(self, **kwargs):
+    def __init__(self, use_placeholder: bool, **kwargs):
         # Only initialize if the instance is being created (not when post method is used)
+        print('Initializing instance')
         if not kwargs:
             try:
                 self.object = getattr(getattr(nb, self.app), self.name)
             except Exception as error:
                 print(f'Error to get object {self.app}.{self.name}\nError: {str(error)}')
+                
+        self.use_placeholder = use_placeholder
+        if self.use_placeholder:
+            # Parse Pydantic Schema to JSON and construct the JSON object to be used as payload.
+            try:
+                self.placeholder_object: dict = {}
+                json_schema = self.schema_in.model_json_schema()
+                for key, value in json_schema['properties'].items():
+                    default_value = value.get('default', None)
+                    if default_value:
+                        self.placeholder_object[key] = value.get('default')
+                
+            except Exception as error:
+                raise FastAPIException(
+                    message=f'Error to create placeholder object {self.app}.{self.name}',
+                    python_exception=str(error)
+                )
+
 
     
     app: str = ''
@@ -221,14 +214,23 @@ class NetBoxBase:
                 python_exception=str(error)
             )
             
-        
     
     def post(self, json: dict):
         def create_object(object, json):
             try:
-                result_object = dict(object.create(**json))
+                # Create placeholder object if 'use_placeholder' is True
+                if self.use_placeholder and self.placeholder_object:
+                    result_object = dict(object.create(**self.placeholder_object))
+                    
+                # Create object with provided json
+                else:
+                    result_object = dict(object.create(**json))
+                
+                # If object has a schema, it will return the object with the schema
                 if self.schema:
                     return self.schema(**result_object)
+                
+                # If not, it will return the object as a dict
                 else:
                     return result_object
 
