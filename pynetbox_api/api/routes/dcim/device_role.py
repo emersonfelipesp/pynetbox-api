@@ -25,7 +25,7 @@ async def create_device_role(device_role: DeviceRoleSchemaIn) -> DeviceRoleSchem
 
 @device_role_router.post('/placeholder', response_model=DeviceRoleSchema)
 async def create_device_role_placeholder(use_placeholder: Annotated[bool | None, Query()] = True) -> DeviceRoleSchema:
-    return DeviceRole(use_placeholder=True).object
+    return DeviceRole(use_placeholder=use_placeholder).object
 
 @device_role_router.put('/{device_role_id}')
 async def update_device_role(device_role_id: int, device_role: DeviceRoleSchema) -> JSONResponse:

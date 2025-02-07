@@ -1,5 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
+from typing import Annotated
 
 from pynetbox_api.dcim import Manufacturer
 from pynetbox_api.schemas.dcim.manufacturer import (
@@ -21,7 +22,11 @@ async def get_manufacturer(manufacturer_id: int) -> ManufacturerSchema:
 @manufacturer_router.post("/", response_model=ManufacturerSchema)
 async def create_manufacturer(manufacturer: ManufacturerSchemaIn) -> ManufacturerSchema:
     return Manufacturer(**manufacturer.model_dump(exclude_unset=True))
-        
+
+@manufacturer_router.post('/placeholder', response_model=ManufacturerSchema)
+async def create_manufacturer_placeholder(use_placeholder: Annotated[bool | None, Query()] = True) -> ManufacturerSchema:
+    return Manufacturer(use_placeholder=use_placeholder).object
+
 @manufacturer_router.put("/{manufacturer_id}")
 async def update_manufacturer(manufacturer_id: int, manufacturer: ManufacturerSchema) -> JSONResponse:
     return Manufacturer().update(id=manufacturer_id, json=manufacturer.model_dump(exclude_unset=True))
