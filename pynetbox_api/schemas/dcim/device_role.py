@@ -1,7 +1,7 @@
 from pydantic import BaseModel, RootModel
 from typing import List
 
-from pynetbox_api.schemas.extras import TagsSchema
+from pynetbox_api.schemas.extras import TagsSchema, TagsSchemaIn
 
 __all__ = [
     'DeviceRoleSchema',
@@ -27,12 +27,12 @@ class DeviceRoleSchema(BaseModel):
     virtualmachine_count: int | None = None
     
 class DeviceRoleSchemaIn(BaseModel):
-    name: str
-    slug: str
-    color: str
-    vm_role: bool | None = None
+    name: str = 'Device Role Placeholder'
+    slug: str = 'device-role-placeholder'
+    color: str = '9e9e9e'
+    vm_role: bool = True
     config_template: str | None = None
-    description: str | None = None
-    tags: List[int] | None = None
+    description: str = 'Placeholder object for ease data ingestion'
+    tags: List[int]
     
 DeviceRoleSchemaList = RootModel[List[DeviceRoleSchema]]

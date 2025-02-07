@@ -1,5 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
+from typing import Annotated
 
 from pynetbox_api.dcim import DeviceRole
 from pynetbox_api.schemas.dcim.device_role import (
@@ -21,6 +22,10 @@ async def get_device_role(device_role_id: int) -> DeviceRoleSchema:
 @device_role_router.post('/', response_model=DeviceRoleSchema)
 async def create_device_role(device_role: DeviceRoleSchemaIn) -> DeviceRoleSchema:
     return DeviceRole(**device_role.model_dump(exclude_unset=True))
+
+@device_role_router.post('/placeholder', response_model=DeviceRoleSchema)
+async def create_device_role_placeholder(use_placeholder: Annotated[bool | None, Query()] = True) -> DeviceRoleSchema:
+    return DeviceRole(use_placeholder=True).object
 
 @device_role_router.put('/{device_role_id}')
 async def update_device_role(device_role_id: int, device_role: DeviceRoleSchema) -> JSONResponse:
