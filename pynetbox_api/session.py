@@ -147,7 +147,8 @@ class NetBoxBase:
                 else:
                     search_dict[field] = json.get(field)
                 
-                duplicate = self.get(**search_dict)
+            duplicate = self.get(**search_dict)
+            
             if not duplicate:
                 return None
             
@@ -217,20 +218,38 @@ class NetBoxBase:
                     return result_object
 
             except pynetbox.core.query.RequestError as error:
-                msg: str = f'Error to create object {self.app}.{self.name}\nError: {str(error)}\nPayload provided: {json}'
+                msg: str = f'Error to create object {self.app}.{self.name}'
                 raise FastAPIException(
                     message=msg,
+                    detail=f'Payload provided: {json}',
+                    python_exception=str(error)
+                )
+            
+            except Exception as error:
+                msg: str = f'Error to create object {self.app}.{self.name}'
+                raise FastAPIException(
+                    message=msg,
+                    detail=f'Payload provided: {json}',
                     python_exception=str(error)
                 )
         
         # If the object is a interface or module_bay, it will check if the interface or module_bay already exists
         # by using the device id, if it exists, it will return the object, if not, it will create the object
-        duplicate = self._check_duplicate(json)
-        if duplicate:
-            return duplicate
-        
-        result = create_object(object=self.object, json=json)
-        return result
+        try:
+            duplicate = self._check_duplicate(json)
+            if duplicate:
+                return duplicate
+            
+            result = create_object(object=self.object, json=json)
+            if result:
+                print(result)
+                return result
+
+        except Exception as error:
+            raise FastAPIException(
+                message=f'Error to create object {self.app}.{self.name}.',
+                python_exception=str(error)
+            )
  
     
     def update(self, id: int, json: dict):
