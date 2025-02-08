@@ -32,7 +32,6 @@ class ManufacturerSchemaIn(BaseModel):
 
 ManufacturerSchemaList = RootModel[List[ManufacturerSchema]]
 
-
 class Manufacturer(NetBoxBase):
     app = 'dcim'
     name = 'manufacturers'

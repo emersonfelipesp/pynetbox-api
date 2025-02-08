@@ -143,6 +143,11 @@ class NetBoxBase:
                     role_id = int(json.get(field, 0))
                     if role_id > 0:
                         search_dict['role_id'] = role_id
+                        
+                elif field == 'manufacturer':
+                    manufacturer_id = int(json.get(field, 0))
+                    if manufacturer_id > 0:
+                        search_dict['manufacturer_id'] = manufacturer_id
 
                 else:
                     search_dict[field] = json.get(field)

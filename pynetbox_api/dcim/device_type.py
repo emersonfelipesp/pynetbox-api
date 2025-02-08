@@ -59,7 +59,7 @@ class DeviceTypeSchemaIn(BaseModel):
     default_platform: str | None = None
     description: str = 'Placeholder object for ease data ingestion'
     tags: List[int] = [Tags(use_placeholder=True).object['id']]
-    u_height: float = 1.0
+    u_height: float = 1
     part_number: str | None = None
     subdevice_role: str = Optional[Literal['parent', 'child', None]]
     airflow: str | None = None
