@@ -1,16 +1,16 @@
+from pynetbox_api.session import NetBoxBase
+
 from pydantic import BaseModel, RootModel
 from typing import List, Optional, Literal
 
-from pynetbox_api.schemas.extras import TagsSchema, TagsSchemaIn
-from pynetbox_api.schemas.dcim import ManufacturerSchema
-
-from pynetbox_api.dcim import Manufacturer
-from pynetbox_api.extras import TagsSchema
+from pynetbox_api.dcim.manufacturer import ManufacturerSchema
+from pynetbox_api.extras import Tags, TagsSchema, TagsSchemaIn
 
 __all__ = [
     'DeviceTypeSchema',
     'DeviceTypeSchemaList',
-    'DeviceTypeSchemaIn'
+    'DeviceTypeSchemaIn',
+    'DeviceType'
 ]
 
 class DeviceTypeSchema(BaseModel):
@@ -50,13 +50,15 @@ class DeviceTypeSchema(BaseModel):
     module_bay_template_count: int | None = None
     inventory_item_template_count: int | None = None
 
+from pynetbox_api.dcim import Manufacturer
+
 class DeviceTypeSchemaIn(BaseModel):
-    manufacturer: int = Manufacturer(use_placeholder=True).object.id
+    manufacturer: int = Manufacturer(use_placeholder=True).object['id']
     model: str = 'Device Type Placeholder'
     slug: str = 'device-type-placeholder'
     default_platform: str | None = None
-    description = 'Placeholder object for ease data ingestion'
-    tags: List[int] = [TagsSchema(use_placeholder=True).object.id]
+    description: str = 'Placeholder object for ease data ingestion'
+    tags: List[int] = [Tags(use_placeholder=True).object['id']]
     u_height: float = 1.0
     part_number: str | None = None
     subdevice_role: str = Optional[Literal['parent', 'child', None]]
@@ -68,4 +70,11 @@ class DeviceTypeSchemaIn(BaseModel):
     comments: str | None = None
 
 DeviceTypeSchemaList = RootModel[List[DeviceTypeSchema]]
-    
+
+class DeviceType(NetBoxBase):
+    app = 'dcim'
+    name = 'device_types'
+    schema = DeviceTypeSchema
+    schema_in = DeviceTypeSchemaIn
+    schema_list = DeviceTypeSchemaList
+    unique_together = ['manufacturer', 'model', 'slug']

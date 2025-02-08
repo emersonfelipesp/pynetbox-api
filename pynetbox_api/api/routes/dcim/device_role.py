@@ -2,11 +2,11 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from typing import Annotated
 
-from pynetbox_api.dcim import DeviceRole
-from pynetbox_api.schemas.dcim.device_role import (
+from pynetbox_api.dcim.device_role import (
     DeviceRoleSchema,
     DeviceRoleSchemaList,
-    DeviceRoleSchemaIn
+    DeviceRoleSchemaIn,
+    DeviceRole
 )
 
 device_role_router = APIRouter(tags=['DCIM / Device Role'])

@@ -2,11 +2,11 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from typing import Annotated
 
-from pynetbox_api.extras import Tags
-from pynetbox_api.schemas.extras import (
+from pynetbox_api.extras import (
     TagsSchema,
     TagsSchemaIn,
-    TagsSchemaList
+    TagsSchemaList,
+    Tags
 )
 
 extras_router = APIRouter(tags=['Extras / Tags'])

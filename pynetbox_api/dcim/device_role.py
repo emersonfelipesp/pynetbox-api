@@ -1,12 +1,15 @@
+from pynetbox_api.session import NetBoxBase
+
 from pydantic import BaseModel, RootModel
 from typing import List
 
-from pynetbox_api.schemas.extras import TagsSchema, TagsSchemaIn
+from pynetbox_api.extras import TagsSchema, TagsSchemaIn
 
 __all__ = [
     'DeviceRoleSchema',
     'DeviceRoleSchemaList',
-    'DeviceRoleSchemaIn'
+    'DeviceRoleSchemaIn',
+    'DeviceRole'
 ]
 
 class DeviceRoleSchema(BaseModel):
@@ -36,3 +39,11 @@ class DeviceRoleSchemaIn(BaseModel):
     tags: List[int]
     
 DeviceRoleSchemaList = RootModel[List[DeviceRoleSchema]]
+
+class DeviceRole(NetBoxBase):
+    app = 'dcim'
+    name = 'device_roles'
+    schema = DeviceRoleSchema
+    schema_in = DeviceRoleSchemaIn
+    schema_list = DeviceRoleSchemaList
+    unique_together = ['name', 'slug']

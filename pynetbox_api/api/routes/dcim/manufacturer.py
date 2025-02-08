@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from typing import Annotated
 
 from pynetbox_api.dcim import Manufacturer
-from pynetbox_api.schemas.dcim.manufacturer import (
+from pynetbox_api.dcim.manufacturer import (
     ManufacturerSchema,
     ManufacturerSchemaList,
     ManufacturerSchemaIn
