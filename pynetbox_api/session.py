@@ -190,7 +190,7 @@ class NetBoxBase:
             )
 
         except Exception as error:
-            msg: str = f'Error to get object {self.app}.{self.name}\nError: {str(error)}\nPayload provided: {multiple_values}'
+            msg: str = f'Error to get object {self.app}.{self.name}\nPayload provided: {kwargs}'
             raise FastAPIException(
                 message=msg,
                 python_exception=str(error)
@@ -304,6 +304,9 @@ class NetBoxBase:
     
     def all(self):
         try:
+            if self.object.count() == 0:
+                return []
+            
             if self.schema:
                 return [self.schema(**dict(object)) for object in self.object.all()]
             else:

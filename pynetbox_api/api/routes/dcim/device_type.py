@@ -9,7 +9,7 @@ from pynetbox_api.dcim.device_type import (
     DeviceType
 )
 
-device_type_router = APIRouter(tags=['DCIM / Device Role'])
+device_type_router = APIRouter(tags=['DCIM / Device Type'])
 
 @device_type_router.get('/', response_model=DeviceTypeSchemaList)
 async def get_device_types() -> DeviceTypeSchemaList:

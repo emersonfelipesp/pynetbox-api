@@ -20,7 +20,7 @@ class ManufacturerSchema(BaseModel):
     slug: str | None = None
     description: str | None = None
     tags: List[TagsSchema] | None = None
-    custom_fields: dict | None = None
+    custom_fields: dict[str, str | None] = {}
     created: str | None = None
     last_updated: str | None = None
 
