@@ -57,14 +57,14 @@ class DeviceSchema(BaseModel):
 
 class DeviceSchemaIn(BaseModel):
     name: str = 'Device Placeholder'
-    role: int = DeviceRole(bootstrap_placeholder=True).result['id']
+    role: int = DeviceRole(bootstrap_placeholder=True).result.get('id')
     description: str = 'Placeholder object for ease data ingestion'
-    tags: List[int] = [Tags(bootstrap_placeholder=True).result['id']]
-    device_type: int = DeviceType(bootstrap_placeholder=True).result['id']
+    tags: List[int] = [Tags(bootstrap_placeholder=True).result.get('id')]
+    device_type: int = DeviceType(bootstrap_placeholder=True).result.get('id')
     airflow: str | None = None
     serial: str | None = None
     asset_tag: str | None = None
-    site: int = Site(bootstrap_placeholder=True).result['id']
+    site: int = Site(bootstrap_placeholder=True).result.get('id')
     location: str | None = None
     position: int | None = None
     rack: str | None = None

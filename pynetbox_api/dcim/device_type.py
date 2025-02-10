@@ -53,12 +53,12 @@ class DeviceTypeSchema(BaseModel):
 from pynetbox_api.dcim import Manufacturer
 
 class DeviceTypeSchemaIn(BaseModel):
-    manufacturer: int = Manufacturer(bootstrap_placeholder=True).result['id']
+    manufacturer: int = Manufacturer(bootstrap_placeholder=True).result.get('id')
     model: str = 'Device Type Placeholder'
     slug: str = 'device-type-placeholder'
     default_platform: str | None = None
     description: str = 'Placeholder object for ease data ingestion'
-    tags: List[int] = [Tags(bootstrap_placeholder=True).result['id']]
+    tags: List[int] = [Tags(bootstrap_placeholder=True).result.get('id')]
     u_height: float = 1
     part_number: str | None = None
     subdevice_role: str = Optional[Literal['parent', 'child', None]]
