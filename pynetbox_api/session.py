@@ -22,7 +22,7 @@ NETBOX_URL = None
 NETBOX_TOKEN = None
 
 try:
-    from env import NETBOX_URL, NETBOX_TOKEN
+    from pynetbox_api.env import NETBOX_URL, NETBOX_TOKEN
     
     if not NETBOX_URL:
         raise FastAPIException(
