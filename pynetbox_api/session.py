@@ -19,7 +19,7 @@ session = requests.Session()
 session.verify = False
 
 NETBOX_URL = None
-NETBOX_TOKEN = NOEN
+NETBOX_TOKEN = None
 
 try:
     from env import NETBOX_URL, NETBOX_TOKEN

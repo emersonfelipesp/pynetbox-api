@@ -3,6 +3,8 @@ FastAPI layer above pynetbox lib.
 
 ## Install (Dev Mode Only)
 
+Before installing, you must provide environment variables at `./pynetbox_api/env.py`.
+
 The project supports only dev-mode package installation currently, as it is on beta stage.
 
 ```
