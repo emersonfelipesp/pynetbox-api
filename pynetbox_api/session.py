@@ -31,35 +31,6 @@ except Exception as error:
 
 nb.http_session = session
 
-'''
-unique_together: dict = {
-    'dcim': {
-        'sites': 'name',
-        'manufacturers': 'name',
-        'device_roles': 'name',
-        'device_types': 'model',
-        'cables': 'id',
-        'devices': ['name', 'device_type', 'role'],
-        'interfaces': ['device', 'name'],
-        'module_bays': ['device', 'name'],
-        'module_types': 'model',
-        'modules': ['device', 'module_bay'],
-        'rear_ports': ['device', 'name'],
-        'front_ports': ['device', 'name', 'rear_port']
-    },
-    'ipam': {
-        'ip_addresses': 'address'
-    },
-    'extras': {
-        'custom_fields': 'name'
-    },
-    'wireless': {
-        'wireless_lans': 'ssid'
-    }
-}
-'''
-
-
 class NetBoxBase:
     def __new__(cls, use_placeholder: bool | None = None, **kwargs):
         # Create a new instance of the class
@@ -67,14 +38,6 @@ class NetBoxBase:
         
         # Check if the instance is being created with arguments
         if kwargs and not use_placeholder: 
-            # Initialize attributes
-            instance.app = ''
-            instance.name = ''
-            instance.schema = None
-            instance.schema_in = None
-            instance.schema_list = None
-            instance.unique_together = []
-            instance.object = getattr(getattr(nb, cls.app), cls.name)
             
             # Return post method result as the class instance
             return instance.post(kwargs)
