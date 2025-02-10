@@ -1,6 +1,14 @@
 import requests
 import urllib3
 import pynetbox
+from typing import (
+    Any,
+    Annotated,
+    Dict,
+    List,
+)
+
+from typing_extensions import Doc
 
 from fastapi.responses import JSONResponse
 from pynetbox_api.exceptions import FastAPIException
@@ -32,6 +40,13 @@ except Exception as error:
 nb.http_session = session
 
 class NetBoxBase:
+    """
+    Helper class to interact with NetBox API using pynetbox library.
+    
+    Attributes:
+        use_placeholder: Define is placeholder object will be used to create new objects, filling missing fields.
+        bootstrap_placeholder: Define if placeholder object will be created during class instantiation or if no object is provided.
+    """
     def __new__(cls, use_placeholder: bool = True, bootstrap_placeholder: bool = False, **kwargs):
         # Create a new instance of the class
         instance = super().__new__(cls)
@@ -63,7 +78,29 @@ class NetBoxBase:
             # Return the instance as is if not being created with arguments
             return instance
         
-    def __init__(self, use_placeholder: bool = True, bootstrap_placeholder: bool = False, **kwargs):
+    def __init__(
+        self,
+        use_placeholder: Annotated[
+            bool,
+            Doc(
+                """
+                Define is placeholder object will be used to create new objects, filling missing fields.
+                It will use the pydantic schema to create the placeholder object.
+                The schema is defined in the class as 'schema_in'.
+                """
+            )
+        ] = True,
+        bootstrap_placeholder: Annotated[
+            bool,
+            Doc(
+                """
+                Define if placeholder object will be created during class instantiation or if no object is provided.
+                If True, it will create a placeholder object using the pydantic schema
+                defined in the class as 'schema_in', using the default schema values.
+                """
+            )
+        ] = False,
+        **kwargs):
         try:
             self.object = getattr(getattr(nb, self.app), self.name)
         except Exception as error:
