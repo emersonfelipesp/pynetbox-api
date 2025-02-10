@@ -51,7 +51,7 @@ class SiteSchemaIn(BaseModel):
     asns: list | None = None
     time_zone: str | None = None
     description: str = 'Placeholder object for ease data ingestion'
-    tags: List[int] = [Tags(use_placeholder=True).object['id']]
+    tags: List[int] = [Tags(bootstrap_placeholder=True).result['id']]
     tenant_group: str | None = None
     tenant: str | None = None
     physical_address: str | None = None

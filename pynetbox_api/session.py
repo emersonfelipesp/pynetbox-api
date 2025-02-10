@@ -32,46 +32,55 @@ except Exception as error:
 nb.http_session = session
 
 class NetBoxBase:
-    def __new__(cls, use_placeholder: bool | None = None, **kwargs):
+    def __new__(cls, use_placeholder: bool = True, bootstrap_placeholder: bool = False, **kwargs):
         # Create a new instance of the class
         instance = super().__new__(cls)
         
         # Check if the instance is being created with arguments
-        if kwargs and not use_placeholder: 
+        if kwargs:
+            try:
+                instance.use_placeholder = use_placeholder
+                instance.bootstrap_placeholder = bootstrap_placeholder
+                
+                instance.object = getattr(getattr(nb, instance.app), instance.name)
+                
+                if instance.use_placeholder or instance.bootstrap_placeholder:
+                    instance.placeholder_dict = instance._bootstrap_placeholder()
+            
+                print('instance.object', instance.object)
+            except Exception as error:
+                raise FastAPIException(
+                    message=f'Error to get object {instance.app}.{instance.name}',
+                    detail='__new__ method',
+                    python_exception=str(error)
+                )
             
             # Return post method result as the class instance
-            return instance.post(kwargs)
+            result = instance.post(kwargs, merge_with_placeholder=use_placeholder)
+            return result if result else {}
+
         else:
             # Return the instance as is if not being created with arguments
             return instance
         
-    def __init__(self, use_placeholder: bool | None = None, **kwargs):
-        # Only initialize if the instance is being created (not when post method is used)
-        if not kwargs:
-            try:
-                self.object = getattr(getattr(nb, self.app), self.name)
-            except Exception as error:
-                print(f'Error to get object {self.app}.{self.name}\nError: {str(error)}')
-                
+    def __init__(self, use_placeholder: bool = True, bootstrap_placeholder: bool = False, **kwargs):
+        try:
+            self.object = getattr(getattr(nb, self.app), self.name)
+        except Exception as error:
+            raise FastAPIException(
+                message=f'Error to get object {self.app}.{self.name}',
+                detail='__new__ method',
+                python_exception=str(error)
+            )
+        
         self.use_placeholder = use_placeholder
-        if self.use_placeholder:
-            # Parse Pydantic Schema to JSON and construct the JSON object to be used as payload.
-            try:
-                self.placeholder_dict: dict = {}
-                json_schema = self.schema_in.model_json_schema()
-                for key, value in json_schema['properties'].items():
-                    default_value = value.get('default', None)
-                    if default_value:
-                        self.placeholder_dict[key] = value.get('default')
-                
-            except Exception as error:
-                raise FastAPIException(
-                    message=f'Error to create placeholder object {self.app}.{self.name}',
-                    python_exception=str(error)
-                )
+        self.bootstrap_placeholder = bootstrap_placeholder
+        
+        if self.use_placeholder or self.bootstrap_placeholder:
+            self.placeholder_dict = self._bootstrap_placeholder()
 
-        if self.use_placeholder and self.placeholder_dict:
-            self.object = self.post(self.placeholder_dict)
+        if self.bootstrap_placeholder and self.placeholder_dict:
+            self.result = self.post(self.placeholder_dict)
 
     
     app: str = ''
@@ -80,7 +89,25 @@ class NetBoxBase:
     schema_in = None
     schema_list = None
     unique_together: list = []
+    placeholder_dict: dict = {}
     
+    def _bootstrap_placeholder(self) -> dict:
+        # Parse Pydantic Schema to JSON and construct the JSON object to be used as payload.
+        bootstrap: dict = {}
+        try:
+            json_schema = self.schema_in.model_json_schema()
+            for key, value in json_schema['properties'].items():
+                default_value = value.get('default', None)
+                if default_value:
+                    bootstrap[key] = value.get('default')
+            
+            return bootstrap
+        
+        except Exception as error:
+            raise FastAPIException(
+                message=f'Error to create placeholder object {self.app}.{self.name}',
+                python_exception=str(error)
+            )
     
     def _check_duplicate(self, json: dict):
         try:
@@ -127,7 +154,58 @@ class NetBoxBase:
             
         except Exception as error:
             return None
-    
+
+    def _create_object(self, json: dict):
+        try:
+            result_object: dict = {}
+            
+            # Create placeholder object if 'bootstrap_placeholder' is True
+            try:
+                if self.bootstrap_placeholder and self.placeholder_dict:
+                    result_object = dict(self.object.create(**self.placeholder_dict))
+                    
+                    # If object has a schema, it will return the object with the schema
+                    return self.schema(**result_object) if self.schema else result_object
+            except Exception as error:
+                raise FastAPIException(
+                    message=f'Error to create placeholder object {self.app}.{self.name}',
+                    python_exception=str(error)
+                )
+
+            try:
+                # If 'merge_with_placeholder' is True, it will merge the provided json with the placeholder
+                merged_json = self.placeholder_dict | json if self.use_placeholder else json
+                result_object = dict(self.object.create(**merged_json))
+                
+                # If object has a schema, it will return the object with the schema
+                return self.schema(**result_object) if self.schema else result_object
+            
+            except pynetbox.core.query.RequestError as error:
+                msg: str = f'[pynetbox.core.query.RequestError] Error to create object {self.app}.{self.name}'
+                raise FastAPIException(
+                    message=msg,
+                    detail=f'Payload provided: {json}',
+                    python_exception=str(error)
+                )
+            
+            except Exception as error:
+                raise FastAPIException(
+                    message=f'Error to create object {self.app}.{self.name}',
+                    python_exception=str(error)
+                )
+            
+
+        except FastAPIException:
+            raise
+        
+        except Exception as error:
+            msg: str = f'[Unexpected Error] Error to create object {self.app}.{self.name}'
+            raise FastAPIException(
+                message=msg,
+                detail=f'Payload provided: {json}',
+                python_exception=str(error)
+            )
+
     def get(
         self,
         id: int = 0,
@@ -165,57 +243,40 @@ class NetBoxBase:
                 python_exception=str(error)
             )
             
-    
-    def post(self, json: dict):
-        def create_object(object, json):
-            try:
-                # Create placeholder object if 'use_placeholder' is True
-                if self.use_placeholder and self.placeholder_dict:
-                    result_object = dict(object.create(**self.placeholder_dict))
-                    
-                # Create object with provided json
-                else:
-                    result_object = dict(object.create(**json))
-                
-                # If object has a schema, it will return the object with the schema
-                if self.schema:
-                    return self.schema(**result_object)
-                
-                # If not, it will return the object as a dict
-                else:
-                    return result_object
-
-            except pynetbox.core.query.RequestError as error:
-                msg: str = f'Error to create object {self.app}.{self.name}'
+        
+    def post(self, json: dict, merge_with_placeholder: bool = True):
+        # Check for missing obrigatory fields
+        for field in self.unique_together:
+            if json.get(field) is None:
                 raise FastAPIException(
-                    message=msg,
-                    detail=f'Payload provided: {json}',
-                    python_exception=str(error)
-                )
-            
-            except Exception as error:
-                msg: str = f'Error to create object {self.app}.{self.name}'
-                raise FastAPIException(
-                    message=msg,
-                    detail=f'Payload provided: {json}',
-                    python_exception=str(error)
+                    message=f"Field '{field}'' is required to create object {self.app}.{self.name}",
+                    status_code=400
                 )
         
-        # If the object is a interface or module_bay, it will check if the interface or module_bay already exists
-        # by using the device id, if it exists, it will return the object, if not, it will create the object
         try:
+            # Check if object already exists
             duplicate = self._check_duplicate(json)
             if duplicate:
                 return duplicate
-            
-            result = create_object(object=self.object, json=json)
-            if result:
-                print(result)
-                return result
-
         except Exception as error:
             raise FastAPIException(
-                message=f'Error to create object {self.app}.{self.name}.',
+                message=f'Error to check duplicate object {self.app}.{self.name}',
+                python_exception=str(error)
+            )
+        
+        try:
+            # Create object
+            result = self._create_object(json=json)
+            if result:
+                return result
+
+        except FastAPIException:
+            raise
+        
+        except Exception as error:
+            raise FastAPIException(
+                message=f'[POST] Error to create object {self.app}.{self.name}.',
+                detail="'create_object' method failed",
                 python_exception=str(error)
             )
  
