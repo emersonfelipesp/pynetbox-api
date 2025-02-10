@@ -1,3 +1,7 @@
+# Ignore env.py file
+env.py
+pynetbox_api/env.py
+
 .vscode/
 
 # Byte-compiled / optimized / DLL files
