@@ -13,50 +13,52 @@ from typing_extensions import Doc
 from fastapi.responses import JSONResponse
 from pynetbox_api.exceptions import FastAPIException
 
-urllib3.disable_warnings()
-
-session = requests.Session()
-session.verify = False
-
 NETBOX_URL = None
 NETBOX_TOKEN = None
 
 try:
     from pynetbox_api.env import NETBOX_URL, NETBOX_TOKEN
-    
-    if not NETBOX_URL:
-        raise FastAPIException(
-            message='NETBOX_URL environment variable not found.',
-            status_code=500
-        )
-    if not NETBOX_TOKEN:
-        raise FastAPIException(
-            message='NETBOX_TOKEN environment variable not found.',
-            status_code=500
-        )
-except FastAPIException:
-    raise
-
 except ImportError as error:
-    raise FastAPIException(
-        message='Error to load environment variables.',
-        python_exception=str(error)
-    )
+    print('Error to Import environment variables.')
     
-try:
-    if NETBOX_URL and NETBOX_TOKEN:
-        nb = pynetbox.api(
-            NETBOX_URL,
-            token=NETBOX_TOKEN,
-        )
+def _establish_from_env():
+    try:
+        if not NETBOX_URL:
+            print('NETBOX_URL environment variable not found.',)
+        
+        if not NETBOX_TOKEN:
+            print('NETBOX_TOKEN environment variable not found.',)
 
-except Exception as error:
-    raise FastAPIException(
-        message=f'Error to connect to Netbox ({NETBOX_URL})',
-        python_exception=str(error)
-    )
+        if NETBOX_URL and NETBOX_TOKEN:
+            urllib3.disable_warnings()
 
-nb.http_session = session
+            session = requests.Session()
+            session.verify = False
+            
+            try:
+                nb = pynetbox.api(
+                    NETBOX_URL,
+                    token=NETBOX_TOKEN,
+                )
+                nb.http_session = session
+                
+                return nb
+            except Exception as error:
+                raise FastAPIException(
+                    message=f'Error to connect to Netbox ({NETBOX_URL})',
+                    python_exception=str(error)
+                )
+    except FastAPIException as error:
+        print(f'Error to load environment variables.\n{error}')
+    except Exception as error:
+        print(f'Unexpected error. {error}')
+    
+
+def _establish_from_sql():
+    # TODO: Implement method to establish connection to NetBox using SQL database
+    pass
+    
+nb_from_env = _establish_from_env()
 
 class NetBoxBase:
     """
@@ -66,7 +68,13 @@ class NetBoxBase:
         use_placeholder: Define is placeholder object will be used to create new objects, filling missing fields.
         bootstrap_placeholder: Define if placeholder object will be created during class instantiation or if no object is provided.
     """
-    def __new__(cls, use_placeholder: bool = True, bootstrap_placeholder: bool = False, **kwargs):
+    def __new__(
+        cls,
+        nb: pynetbox.api = nb_from_env,
+        bootstrap_placeholder: bool = False,
+        use_placeholder: bool = True,
+        **kwargs
+    ):
         # Create a new instance of the class
         instance = super().__new__(cls)
         
@@ -90,6 +98,7 @@ class NetBoxBase:
                 )
             
             # Return post method result as the class instance
+            print('kwargs', kwargs)
             result = instance.post(kwargs, merge_with_placeholder=use_placeholder)
             return result if result else {}
 
@@ -99,16 +108,7 @@ class NetBoxBase:
         
     def __init__(
         self,
-        use_placeholder: Annotated[
-            bool,
-            Doc(
-                """
-                Define is placeholder object will be used to create new objects, filling missing fields.
-                It will use the pydantic schema to create the placeholder object.
-                The schema is defined in the class as 'schema_in'.
-                """
-            )
-        ] = True,
+        nb: pynetbox.api = nb_from_env,
         bootstrap_placeholder: Annotated[
             bool,
             Doc(
@@ -119,6 +119,16 @@ class NetBoxBase:
                 """
             )
         ] = False,
+        use_placeholder: Annotated[
+            bool,
+            Doc(
+                """
+                Define is placeholder object will be used to create new objects, filling missing fields.
+                It will use the pydantic schema to create the placeholder object.
+                The schema is defined in the class as 'schema_in'.
+                """
+            )
+        ] = True,
         **kwargs):
         try:
             self.object = getattr(getattr(nb, self.app), self.name)
@@ -213,6 +223,7 @@ class NetBoxBase:
 
     def _create_object(self, json: dict):
         try:
+            print('create_object_dict', json)
             result_object: dict = {}
             
             # Create placeholder object if 'bootstrap_placeholder' is True
@@ -322,6 +333,7 @@ class NetBoxBase:
         
         try:
             # Create object
+            print('create_object 1')
             result = self._create_object(json=json)
             if result:
                 return result
