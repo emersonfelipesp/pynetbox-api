@@ -18,37 +18,12 @@ urllib3.disable_warnings()
 session = requests.Session()
 session.verify = False
 
-import os
-from dotenv import load_dotenv
+NETBOX_URL = None
+NETBOX_TOKEN = NOEN
 
 try:
-    # Load environment variables from .env file
-    print(f'OS GETCWD: {os.getcwd()}')
+    from env import NETBOX_URL, NETBOX_TOKEN
     
-    proxbox_api_folder = os.getcwd()
-    print(f'PROXBOX API: {proxbox_api_folder}')
-    
-    upper_folder = os.path.dirname(proxbox_api_folder)
-    
-    print(f'NETBOX PROXBOX: {upper_folder}')
-    pynetbox_api_folder = f'{upper_folder}/pynetbox-api/.env'
-    
-    print(f'PYNETBOX API: {pynetbox_api_folder}')
-    
-    load_dotenv(dotenv_path=pynetbox_api_folder)
-
-    NETBOX_URL = os.getenv('NETBOX_URL')
-    NETBOX_TOKEN = os.getenv('NETBOX_TOKEN')
-
-    print(f'NETBOX_URL: {NETBOX_URL}')
-    print(f'NETBOX_TOKEN: {NETBOX_TOKEN}')
-except Exception as error:
-    raise FastAPIException(
-        message='Error to load environment variables.',
-        python_exception=str(error)
-    )
-    
-try:
     if not NETBOX_URL:
         raise FastAPIException(
             message='NETBOX_URL environment variable not found.',
@@ -59,7 +34,16 @@ try:
             message='NETBOX_TOKEN environment variable not found.',
             status_code=500
         )
+except FastAPIException:
+    raise
+
+except ImportError as error:
+    raise FastAPIException(
+        message='Error to load environment variables.',
+        python_exception=str(error)
+    )
     
+try:
     if NETBOX_URL and NETBOX_TOKEN:
         nb = pynetbox.api(
             NETBOX_URL,
