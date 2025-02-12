@@ -147,6 +147,11 @@ class NetBoxBase:
 
         if self.bootstrap_placeholder and self.placeholder_dict:
             self.result = self.post(self.placeholder_dict)
+            self.id = None
+            try:
+                self.id = self.result.get('id', None)
+            except:
+                self.id = getattr(self.result, 'id', None)
 
     
     app: str = ''

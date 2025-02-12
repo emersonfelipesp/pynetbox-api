@@ -6,22 +6,25 @@ from typing import List
 from pynetbox_api.extras import TagsSchema, TagsSchemaIn
 
 __all__ = [
+    'DeviceRoleBasicSchema',
     'DeviceRoleSchema',
     'DeviceRoleSchemaList',
     'DeviceRoleSchemaIn',
     'DeviceRole'
 ]
 
-class DeviceRoleSchema(BaseModel):
+class DeviceRoleBasicSchema(BaseModel):
     id: int | None = None
     url: str | None = None
-    display_url: str | None = None
     display: str | None = None
     name: str | None = None
     slug: str | None = None
+    description: str | None = None 
+         
+class DeviceRoleSchema(DeviceRoleBasicSchema):
+    display_url: str | None = None
     vm_role: bool | None = None
     config_template: str | None = None
-    description: str | None = None
     tags: List[TagsSchema] | None = None
     custom_fields: dict[str, str | None] = {}
     created: str | None = None

@@ -3,25 +3,31 @@ from pynetbox_api.session import NetBoxBase
 from pydantic import BaseModel, RootModel
 from typing import List, Optional, Literal
 
+from pynetbox_api.dcim import Manufacturer
 from pynetbox_api.dcim.manufacturer import ManufacturerSchema
 from pynetbox_api.extras import Tags, TagsSchema, TagsSchemaIn
 
 __all__ = [
+    'DeviceTypeBasicSchema',
     'DeviceTypeSchema',
     'DeviceTypeSchemaList',
     'DeviceTypeSchemaIn',
     'DeviceType'
 ]
 
-class DeviceTypeSchema(BaseModel):
+class DeviceTypeBasicSchema(BaseModel):
     id: int | None = None
     url: str | None = None
-    display_url: str | None = None
     display: str | None = None
     manufacturer: ManufacturerSchema
-    default_platform: str | None = None
     model: str | None = None
     slug: str | None = None
+    description: str | None = None
+
+
+class DeviceTypeSchema(DeviceTypeBasicSchema):
+    display_url: str | None = None
+    default_platform: str | None = None
     part_number: str | None = None
     u_height: int | None = None
     exclude_from_utilization: bool | None = None
@@ -32,7 +38,6 @@ class DeviceTypeSchema(BaseModel):
     weight_unit: str | None = None
     front_image: str | None = None
     rear_image: str | None = None
-    description: str | None = None
     comments: str | None = None
     tags: List[TagsSchema] | None = None
     custom_fields: dict[str, str | None] = {}
@@ -50,7 +55,6 @@ class DeviceTypeSchema(BaseModel):
     module_bay_template_count: int | None = None
     inventory_item_template_count: int | None = None
 
-from pynetbox_api.dcim import Manufacturer
 
 class DeviceTypeSchemaIn(BaseModel):
     manufacturer: int = Manufacturer(bootstrap_placeholder=True).result.get('id')

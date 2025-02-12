@@ -1,7 +1,9 @@
 from pydantic import BaseModel, RootModel, HttpUrl, AnyHttpUrl
 from typing import List, Optional, Union
 
-from pynetbox_api.dcim.device import DeviceBasicSchema
+from proxbox_api import ProxboxTag
+
+from pynetbox_api.dcim.device import Device, DeviceBasicSchema
 from pynetbox_api.session import NetBoxBase
 from pynetbox_api.extras import TagsSchema
 from pynetbox_api.utils import ValueLabelSchema
@@ -12,8 +14,6 @@ __all__ = [
     "InterfaceSchemaIn",
     "Interface"
 ]
-
-
 
 class InterfaceSchema(BaseModel):
     id: int | None = None
@@ -63,9 +63,28 @@ class InterfaceSchema(BaseModel):
     connected_endpoints_type: Optional[Union[str, None]] = None
     connected_endpoints_reachable: Optional[Union[str, None]] = None
     tags: List[TagsSchema] = []
-    custom_fields: dict = dict[str, str | None] = {}
+    custom_fields: dict[str, str | None] = {}
     created: str | None = None
     last_updated: str | None = None
     count_ipaddresses: int | None = None
     count_fhrp_groups: int | None = None
     _occupied: bool | None = None
+
+class InterfaceSchemaIn(BaseModel):
+    device: int = Device(bootstrap_placeholder=True).id
+    name: str = 'Interface Placeholder'
+    type: str = 'other'
+    enabled: bool = True
+    description: str = 'Interface Placeholder'
+    tags: List[int] = [ProxboxTag(bootstrap_placeholder=True).id]
+
+InterfaceSchemaList = RootModel[List[InterfaceSchema]]
+
+class Interface(NetBoxBase):
+    app = 'dcim'
+    name = 'interfaces'
+    schema = InterfaceSchema
+    schema_in = InterfaceSchemaIn
+    schema_list = InterfaceSchemaList
+    unique_together = ['device', 'name']
+    required_fields = ['device', 'name', 'type']

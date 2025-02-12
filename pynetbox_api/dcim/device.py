@@ -3,7 +3,7 @@ from typing import List
 
 from pynetbox_api.session import NetBoxBase
 from pynetbox_api.dcim.site import Site, SiteSchema
-from pynetbox_api.dcim.device_role import DeviceRole, DeviceRoleSchema
+from pynetbox_api.dcim.device_role import DeviceRole, DeviceRoleBasicSchema
 from pynetbox_api.dcim.device_type import DeviceType, DeviceTypeBasicSchema
 from pynetbox_api.extras import Tags, TagsSchema
 from pynetbox_api.utils import StatusSchema
@@ -19,7 +19,7 @@ class DeviceSchema(DeviceBasicSchema):
     display_url: str
     name: str
     device_type: DeviceTypeBasicSchema
-    role: DeviceRoleSchema
+    role: DeviceRoleBasicSchema
     tenant: bool | None = None
     platform: str | None = None
     serial: str | None = None
