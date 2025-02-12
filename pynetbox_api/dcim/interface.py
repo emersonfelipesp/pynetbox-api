@@ -9,21 +9,27 @@ from pynetbox_api.extras import TagsSchema
 from pynetbox_api.utils import ValueLabelSchema
 
 __all__ = [
+    "InterfaceBasicSchema",
     "InterfaceSchema",
     "InterfaceSchemaList",
     "InterfaceSchemaIn",
     "Interface"
 ]
 
-class InterfaceSchema(BaseModel):
+class InterfaceBasicSchema(BaseModel):
     id: int | None = None
     url: AnyHttpUrl | None = None
-    display_url: str | None = None
     display: str | None = None
+    name: str | None = None
+    description: str | None = None
     device: DeviceBasicSchema
+    cable: Optional[Union[str, None]] = None
+    _occupied: bool | None = None
+    
+class InterfaceSchema(InterfaceBasicSchema):
+    display_url: str | None = None
     vdcs: List[str] | None = None
     module: str | None = None
-    name: str | None = None
     label: str | None = None
     type: ValueLabelSchema
     enabled: bool | None = None
@@ -37,7 +43,6 @@ class InterfaceSchema(BaseModel):
     duplex: str | None = None
     wwn: str | None = None
     mgmt_only: bool | None = None
-    description: str | None = None
     mode: str | None = None
     rf_role: str | None = None
     rf_channel: str | None = None
@@ -51,7 +56,6 @@ class InterfaceSchema(BaseModel):
     qinq_svlan: str | None = None
     vlan_translation_policy: Optional[Union[str, None]] = None
     mark_connected: bool | None = None
-    cable: Optional[Union[str, None]] = None
     cable_end: Optional[Union[str, None]] = None
     wireless_link: Optional[Union[str, None]] = None
     link_peers: List = []
@@ -68,7 +72,6 @@ class InterfaceSchema(BaseModel):
     last_updated: str | None = None
     count_ipaddresses: int | None = None
     count_fhrp_groups: int | None = None
-    _occupied: bool | None = None
 
 class InterfaceSchemaIn(BaseModel):
     device: int = Device(bootstrap_placeholder=True).id
