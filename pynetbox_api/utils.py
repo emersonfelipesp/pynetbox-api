@@ -1,15 +1,15 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Any, Optional, Union
 from pynetbox_api.extras import TagsSchema
 
 class ValueLabelSchema(BaseModel):
     value: str | None = None
-    label: str | None = None
+    label: Optional[Union[Any, str, int, None]] = None
 
 class StatusSchema(BaseModel):
     value: str | None = None
     label: str | None = None
-    
+
 class GenericSchema(BaseModel):
     tags: List[TagsSchema] = []
     custom_fields: dict[str, str | None] = {}

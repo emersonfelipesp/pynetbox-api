@@ -22,9 +22,13 @@ class IPAddressBasicSchema(BaseModel):
     address: str | None = None
     description: str | None = None
     
+class IPAddressFamily(BaseModel):
+    value: int | None = None
+    label: str | None = None
+
 class IPAddressSchema(IPAddressBasicSchema, GenericSchema):
     display_url: AnyHttpUrl | None = None
-    family: ValueLabelSchema | None = None
+    family: IPAddressFamily | None = None
     vrf: Optional[Union[str, None]] = None
     tenant: Optional[Union[str, None]] = None
     status: ValueLabelSchema | None = None

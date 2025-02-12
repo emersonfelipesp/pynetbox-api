@@ -6,7 +6,7 @@ from proxbox_api import ProxboxTag
 from pynetbox_api.dcim.device import Device, DeviceBasicSchema
 from pynetbox_api.session import NetBoxBase
 from pynetbox_api.extras import TagsSchema
-from pynetbox_api.utils import ValueLabelSchema
+from pynetbox_api.utils import GenericSchema, ValueLabelSchema
 
 __all__ = [
     "InterfaceBasicSchema",
@@ -26,7 +26,7 @@ class InterfaceBasicSchema(BaseModel):
     cable: Optional[Union[str, None]] = None
     _occupied: bool | None = None
     
-class InterfaceSchema(InterfaceBasicSchema):
+class InterfaceSchema(InterfaceBasicSchema, GenericSchema):
     display_url: str | None = None
     vdcs: List[str] | None = None
     module: str | None = None
@@ -66,10 +66,6 @@ class InterfaceSchema(InterfaceBasicSchema):
     connected_endpoints: Optional[Union[str, None]] = None
     connected_endpoints_type: Optional[Union[str, None]] = None
     connected_endpoints_reachable: Optional[Union[str, None]] = None
-    tags: List[TagsSchema] = []
-    custom_fields: dict[str, str | None] = {}
-    created: str | None = None
-    last_updated: str | None = None
     count_ipaddresses: int | None = None
     count_fhrp_groups: int | None = None
 

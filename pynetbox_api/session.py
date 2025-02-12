@@ -180,7 +180,7 @@ class NetBoxBase:
                 python_exception=str(error)
             )
     
-    def _check_duplicate(self, json: dict):
+    def _check_duplicate(self, json: dict) -> dict:
         try:
 
             search_dict: dict = {}
@@ -218,15 +218,12 @@ class NetBoxBase:
             if not duplicate:
                 return None
             
-            if self.schema:
-                return self.schema(**dict(duplicate)).model_dump()
-            else:
-                return dict(duplicate)
+            return dict(duplicate)
             
         except Exception as error:
             return None
 
-    def _create_object(self, json: dict):
+    def _create_object(self, json: dict) -> dict:
         try:
             print('create_object_dict', json)
             result_object: dict = {}
@@ -250,7 +247,7 @@ class NetBoxBase:
                 result_object = dict(self.object.create(**merged_json))
                 
                 # If object has a schema, it will return the object with the schema
-                return self.schema(**result_object) if self.schema else result_object
+                return result_object
             
             except pynetbox.core.query.RequestError as error:
                 msg: str = f'[pynetbox.core.query.RequestError] Error to create object {self.app}.{self.name}'
@@ -282,17 +279,17 @@ class NetBoxBase:
         self,
         id: int = 0,
         **kwargs
-    ):
+    ) -> dict:
         try:
             if id:
-                return self.object.get(id)
+                return dict(self.object.get(id))
             if kwargs:
                 try:
-                    return self.object.get(**kwargs)
+                    return dict(self.object.get(**kwargs))
                 except ValueError:
                     try:
                         for first_object in self.object.filter(**kwargs):
-                            return first_object
+                            return dict(first_object)
                         
                     except pynetbox.core.query.RequestError as error:
                         msg: str = f'Error to get object {self.app}.{self.name}\nError: {str(error)}\nPayload provided: {kwargs}'
@@ -340,8 +337,12 @@ class NetBoxBase:
             # Create object
             print('create_object 1')
             result = self._create_object(json=json)
-            if result:
-                return result
+            
+            if self.schema:
+                return self.schema(**result)
+
+            print(f'[{self.app}.{self.name}] self.schema not found, returning raw JSON (dict)')
+            return result
 
         except FastAPIException:
             raise
