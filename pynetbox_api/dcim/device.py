@@ -4,16 +4,21 @@ from typing import List
 from pynetbox_api.session import NetBoxBase
 from pynetbox_api.dcim.site import Site, SiteSchema
 from pynetbox_api.dcim.device_role import DeviceRole, DeviceRoleSchema
-from pynetbox_api.dcim.device_type import DeviceType, DeviceTypeSchema
+from pynetbox_api.dcim.device_type import DeviceType, DeviceTypeBasicSchema
 from pynetbox_api.extras import Tags, TagsSchema
 from pynetbox_api.utils import StatusSchema
 
-class DeviceSchema(BaseModel):
-    id: int
-    url: str
+class DeviceBasicSchema(BaseModel):
+    id: int | None = None
+    url: str | None = None
+    display: str | None = None
+    name: str | None = None
+    description: str | None = None
+    
+class DeviceSchema(DeviceBasicSchema):
     display_url: str
     name: str
-    device_type: DeviceTypeSchema
+    device_type: DeviceTypeBasicSchema
     role: DeviceRoleSchema
     tenant: bool | None = None
     platform: str | None = None
