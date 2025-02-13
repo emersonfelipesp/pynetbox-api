@@ -23,7 +23,7 @@ class ClusterTypeBasicSchema(BaseModel):
     slug: str | None = None
     description: str | None = None
 
-class ClusterTypeSchema(ClusterTypeBasicSchema, GenericSchema):
+class ClusterTypeSchema(GenericSchema, ClusterTypeBasicSchema):
     cluster_count: int | None = None
 
 class ClusterTypeSchemaIn(BaseModel):
