@@ -1,3 +1,4 @@
+from fastapi import APIRouter
 from pydantic import BaseModel, RootModel
 from typing import List
 
@@ -96,3 +97,7 @@ class Device(NetBoxBase):
     schema_in = DeviceSchemaIn
     schema_list = DeviceSchemaList
     unique_together = ['name']
+    
+    # API
+    prefix = '/device'
+    api_router = APIRouter(tags=['DCIM / Device'])

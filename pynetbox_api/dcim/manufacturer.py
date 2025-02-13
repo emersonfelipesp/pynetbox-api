@@ -1,3 +1,5 @@
+from fastapi import APIRouter
+
 from pydantic import BaseModel, RootModel
 from typing import List
 
@@ -39,3 +41,7 @@ class Manufacturer(NetBoxBase):
     schema_in = ManufacturerSchemaIn
     schema_list = ManufacturerSchemaList
     unique_together = ['name', 'slug']
+    
+    # API
+    prefix = '/manufacturer'
+    api_router = APIRouter(tags=['DCIM / Manufacturer'])

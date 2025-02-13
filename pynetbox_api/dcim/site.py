@@ -1,3 +1,4 @@
+from fastapi import APIRouter
 from pydantic import BaseModel, RootModel
 from typing import List
 
@@ -69,3 +70,7 @@ class Site(NetBoxBase):
     schema_in = SiteSchemaIn
     schema_list = SiteSchemaList
     unique_together = ['name', 'slug']
+    
+    # API
+    prefix = '/site'
+    api_router = APIRouter(tags=['DCIM / Site'])

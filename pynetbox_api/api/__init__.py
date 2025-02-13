@@ -10,9 +10,11 @@ class HTTPMethod(Enum):
     DELETE = "delete"
 
 def create_endpoints(
-    app: Callable,
     class_instance
 ):
+    """
+    Class-Based Route Generator
+    """
     async def get_all():
         return class_instance().all()
 
@@ -40,9 +42,9 @@ def create_endpoints(
         'delete': delete
     }
 
-    app.get('/', response_model=class_instance.schema_list)(handlers['get_all'])
-    app.get('/{id}', response_model=class_instance.schema)(handlers['get'])
-    app.get('/placeholder', response_model=class_instance.schema)(handlers['placeholder'])
-    app.post('/', response_model=class_instance.schema)(handlers['post'])
-    app.put('/{id}')(handlers['put'])
-    app.delete('/{id}')(handlers['delete'])
+    class_instance.api_router.get('/', response_model=class_instance.schema_list)(handlers['get_all'])
+    class_instance.api_router.get('/{id}', response_model=class_instance.schema)(handlers['get'])
+    class_instance.api_router.get('/placeholder', response_model=class_instance.schema)(handlers['placeholder'])
+    class_instance.api_router.post('/', response_model=class_instance.schema)(handlers['post'])
+    class_instance.api_router.put('/{id}')(handlers['put'])
+    class_instance.api_router.delete('/{id}')(handlers['delete'])
