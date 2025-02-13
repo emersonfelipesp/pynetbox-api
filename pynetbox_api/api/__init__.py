@@ -25,7 +25,7 @@ def create_endpoints(
     async def post(data: class_instance.schema_in):
         return class_instance(**data.model_dump(exclude_unset=True))
 
-    async def put(id: int, data):
+    async def put(id: int, data: class_instance.schema_in):
         return class_instance().update(id=id, json=data.model_dump(exclude_unset=True))
 
     async def delete(id: int) -> JSONResponse:
