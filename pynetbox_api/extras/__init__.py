@@ -5,13 +5,14 @@ from pydantic import BaseModel, RootModel
 from typing import List
 
 __all__ = [
+    'TagsBasicSchema',
     'TagsSchema',
     'TagsSchemaList',
     'TagsSchemaIn',
     'Tags'
 ]
 
-class TagsSchema(BaseModel):
+class TagsBasicSchema(BaseModel):
     id: int | None = None
     url: str | None = None
     display_url: str | None = None
@@ -19,6 +20,8 @@ class TagsSchema(BaseModel):
     name: str | None = None
     slug: str | None = None
     color: str | None = None
+    
+class TagsSchema(TagsBasicSchema):
     description: str | None = None
     object_type: list[str] | None = None
     tagged_items: int | None = None

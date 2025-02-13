@@ -1,2 +1,3 @@
 from pynetbox_api.virtualization.cluster_type import ClusterType
 from pynetbox_api.virtualization.cluster_group import ClusterGroup
+from pynetbox_api.virtualization.cluster import Cluster

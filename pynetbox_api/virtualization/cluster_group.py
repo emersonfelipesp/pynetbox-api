@@ -1,13 +1,8 @@
 from fastapi import APIRouter
-
+from pydantic import BaseModel, RootModel, AnyHttpUrl
+from typing import List
+from pynetbox_api.utils import GenericSchema
 from pynetbox_api.session import NetBoxBase
-
-from pydantic import BaseModel, RootModel, AnyHttpUrl  
-from typing import List, Optional, Union
-
-from pynetbox_api.utils import GenericSchema, ValueLabelSchema
-from pynetbox_api.dcim.interface import Interface, InterfaceBasicSchema
-from pynetbox_api.extras import Tags, TagsSchema
 
 __all__ = [
     'ClusterGroupBasicSchema',
@@ -37,11 +32,16 @@ class ClusterGroupSchemaIn(BaseModel):
 ClusterGroupSchemaList = RootModel[List[ClusterGroupSchema]]
 
 class ClusterGroup(NetBoxBase):
+    # NetBox API endpoint: /api/virtualization/cluster-groups/
     app: str = 'virtualization'
     name: str = 'cluster_groups'
+    
+    # Schema definitions
     schema = ClusterGroupSchema
     schema_in = ClusterGroupSchemaIn
     schema_list = ClusterGroupSchemaList
+    
+    # Unique constraints
     unique_together = ['name', 'slug']
     required_fields = ['name', 'slug']
     
