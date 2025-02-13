@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-from pynetbox_api import ncob
+#from pynetbox_api import nb
 from pynetbox_api.exceptions import FastAPIException
 from pynetbox_api.api.routes import netbox_router
 
