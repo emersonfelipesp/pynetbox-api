@@ -1,3 +1,4 @@
+from fastapi import APIRouter
 from pynetbox_api.session import NetBoxBase
 
 from pydantic import BaseModel, RootModel
@@ -82,3 +83,7 @@ class DeviceType(NetBoxBase):
     schema_in = DeviceTypeSchemaIn
     schema_list = DeviceTypeSchemaList
     unique_together = ['manufacturer', 'model', 'slug']
+
+    # API
+    prefix = '/device_type'
+    api_router = APIRouter(tags=['DCIM / Device Type'])

@@ -1,3 +1,4 @@
+from fastapi import APIRouter
 from pynetbox_api.session import NetBoxBase
 
 from pydantic import BaseModel, RootModel
@@ -50,3 +51,7 @@ class DeviceRole(NetBoxBase):
     schema_in = DeviceRoleSchemaIn
     schema_list = DeviceRoleSchemaList
     unique_together = ['name', 'slug']
+    
+    # API
+    prefix = '/device_role'
+    api_router = APIRouter(tags=['DCIM / Device Role'])

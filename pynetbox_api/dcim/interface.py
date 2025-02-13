@@ -1,11 +1,9 @@
 from pydantic import BaseModel, RootModel, HttpUrl, AnyHttpUrl
 from typing import List, Optional, Union
 
-from proxbox_api import ProxboxTag
-
 from pynetbox_api.dcim.device import Device, DeviceBasicSchema
 from pynetbox_api.session import NetBoxBase
-from pynetbox_api.extras import TagsSchema
+from pynetbox_api.extras import TagsSchema, Tags
 from pynetbox_api.utils import GenericSchema, ValueLabelSchema
 
 __all__ = [
@@ -75,7 +73,7 @@ class InterfaceSchemaIn(BaseModel):
     type: str = 'other'
     enabled: bool = True
     description: str = 'Interface Placeholder'
-    tags: List[int] = [ProxboxTag(bootstrap_placeholder=True).id]
+    tags: List[int] = [Tags(bootstrap_placeholder=True).id]
 
 InterfaceSchemaList = RootModel[List[InterfaceSchema]]
 
