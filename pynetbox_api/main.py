@@ -5,7 +5,11 @@ from fastapi.responses import JSONResponse
 from pynetbox_api.exceptions import FastAPIException
 from pynetbox_api.api.routes import netbox_router
 
-app = FastAPI()
+app = FastAPI(
+    title='pynetbox API',
+    description='FastAPI wrapper for pynetbox',
+    version='0.1'
+)
 app.include_router(netbox_router)
 
 @app.exception_handler(FastAPIException)

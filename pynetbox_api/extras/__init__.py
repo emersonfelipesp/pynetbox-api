@@ -1,3 +1,4 @@
+from fastapi import APIRouter
 from pynetbox_api.session import NetBoxBase
 
 from pydantic import BaseModel, RootModel     
@@ -40,3 +41,7 @@ class Tags(NetBoxBase):
     schema_in = TagsSchemaIn
     schema_list = TagsSchemaList
     unique_together = ['name', 'slug']
+    
+    # API 
+    prefix = '/tags'
+    api_router = APIRouter(tags=['Extras / Tags'])

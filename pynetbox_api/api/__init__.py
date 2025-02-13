@@ -3,12 +3,6 @@ from typing import Callable
 from enum import Enum
 from fastapi.responses import JSONResponse
 
-class HTTPMethod(Enum):
-    GET = "get"
-    POST = "post"
-    PUT = "put"
-    DELETE = "delete"
-
 def create_endpoints(
     class_instance
 ):
