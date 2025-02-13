@@ -335,11 +335,10 @@ class NetBoxBase:
         
         try:
             # Create object
-            print('create_object 1')
             result = self._create_object(json=json)
             
             if self.schema:
-                return self.schema(**result)
+                return self.schema(**result) if type(result) == dict else result
 
             print(f'[{self.app}.{self.name}] self.schema not found, returning raw JSON (dict)')
             return result
