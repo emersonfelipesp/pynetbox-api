@@ -1,3 +1,5 @@
+from fastapi import APIRouter
+
 from pynetbox_api.session import NetBoxBase
 
 from pydantic import BaseModel, RootModel, AnyHttpUrl  
@@ -42,3 +44,7 @@ class ClusterType(NetBoxBase):
     schema_list = ClusterTypeSchemaList
     unique_together = ['name', 'slug']
     required_fields = ['name', 'slug']
+    
+    # API
+    prefix = '/cluster_type'
+    api_router = APIRouter(tags=['Virtualization / Cluster Type'])

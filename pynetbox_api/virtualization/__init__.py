@@ -1,0 +1,1 @@
+from pynetbox_api.virtualization.cluster_type import ClusterType

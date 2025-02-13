@@ -44,7 +44,7 @@ def create_endpoints(
 
     class_instance.api_router.get('/', response_model=class_instance.schema_list)(handlers['get_all'])
     class_instance.api_router.get('/{id}', response_model=class_instance.schema)(handlers['get'])
-    class_instance.api_router.get('/placeholder', response_model=class_instance.schema)(handlers['placeholder'])
+    class_instance.api_router.get('/placeholder/', response_model=class_instance.schema)(handlers['placeholder'])
     class_instance.api_router.post('/', response_model=class_instance.schema)(handlers['post'])
     class_instance.api_router.put('/{id}')(handlers['put'])
     class_instance.api_router.delete('/{id}')(handlers['delete'])
