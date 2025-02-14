@@ -9,6 +9,8 @@ from typing import (
 )
 
 from typing_extensions import Doc
+from pydantic import BaseModel
+from typing import List, Any, Optional, Union
 
 from fastapi.responses import JSONResponse
 from pynetbox_api.exceptions import FastAPIException
@@ -100,6 +102,10 @@ class NetBoxBase:
             # Return post method result as the class instance
             print('kwargs', kwargs)
             result = instance.post(kwargs, merge_with_placeholder=use_placeholder)
+
+            instance.id = result.get('id', None) if type(result) == dict else None
+            instance.id = getattr(result, 'id', None) if type(result) != dict else None
+            
             return result if result else {}
 
         else:
@@ -438,3 +444,11 @@ class NetBoxBase:
                 message=msg,
                 python_exception=str(error)
             )
+    
+    class ValueLabelSchema(BaseModel):
+        value: str | None = None
+        label: Optional[Union[Any, str, int, None]] = None
+
+    class StatusSchema(BaseModel):
+        value: str | None = None
+        label: str | None = None

@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel, RootModel, AnyHttpUrl
 from typing import List
-from pynetbox_api.virtualization.virtual_machine import VirtualMachine, VirtualMachineBasicSchema
+from pynetbox_api.virtualization.virtual_machine import VirtualMachine
 from pynetbox_api.utils import GenericSchema
 from pynetbox_api.session import NetBoxBase
 
@@ -23,7 +23,7 @@ class VMInterfaceBasicSchema(BaseModel):
 
 
 class VMInterfaceSchema(GenericSchema, VMInterfaceBasicSchema):
-    virtual_machine: VirtualMachineBasicSchema | None = None
+    virtual_machine: VirtualMachine.BasicSchema | None = None
     enabled: bool | None = None
     parent: VMInterfaceBasicSchema | None = None
     bridge: VMInterfaceBasicSchema | None = None
