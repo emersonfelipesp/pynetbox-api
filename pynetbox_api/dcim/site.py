@@ -6,19 +6,22 @@ from pynetbox_api.session import NetBoxBase
 from pynetbox_api.extras import Tags, TagsSchema
 from pynetbox_api.utils import StatusSchema
 __all__ = [
+    "SiteBasicSchema",
     "SiteSchema",
     "SiteSchemaList",
     "SiteSchemaIn",
     "Site"
 ]
 
-class SiteSchema(BaseModel):
+class SiteBasicSchema(BaseModel):
     id: int | None = None
     url: str | None = None
     display: str | None = None
-    display_url: str | None = None
     name: str | None = None
     slug: str | None = None
+
+class SiteSchema(SiteBasicSchema):
+    display_url: str | None = None
     status: StatusSchema | None = None
     region: str | None = None
     group: str | None = None
