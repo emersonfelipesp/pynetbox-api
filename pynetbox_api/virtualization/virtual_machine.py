@@ -10,10 +10,30 @@ from pynetbox_api.ipam.ip_address import IPAddress
 from pynetbox_api.dcim.device import Device
     
 __all__ = [
-    'VirtualMachine'
+    'VirtualMachine',
 ]
 
+from enum import Enum
+
+
 class VirtualMachine(NetBoxBase):
+    class StatusField(Enum):
+        """
+        Key are Netbox Status.
+        Values are Proxmox Status.
+        """
+        active = "online"
+        #active = "running"
+        offline = "stopped"
+        prelaunch = "prelaunch"
+    
+    status_field: dict = {
+        'online': 'active',
+        'running': 'active',
+        'stopped': 'offline',
+        'prelaunch': 'prelaunch',
+    }
+
     class BasicSchema(BaseModel):
         id: int | None = None
         url: AnyHttpUrl | None = None
@@ -39,7 +59,7 @@ class VirtualMachine(NetBoxBase):
         memory: Optional[Union[int, float]] = None
         disk: Optional[Union[int, float]] = None
         config_template: str | None = None
-        local_context_data: dict[str, str | None] = {}
+        local_context_data: Optional[Union[dict, None]] = None
         config_context: dict[str, str | None] = {}
         interface_count: int | None = None
         virtual_disk_count: int | None = None
