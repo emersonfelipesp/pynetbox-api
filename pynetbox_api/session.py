@@ -303,34 +303,56 @@ class NetBoxBase:
         kwargs.pop('is_bootstrap', None)
         
         app_name = f'{self.app}.{self.name}'
-        app_name_cache = global_cache.get(app_name, global_cache.set(
-                key=app_name, value={}, return_value=True
+        '''
+        if cache:
+            app_name_cache = global_cache.get(
+                key=app_name,
+                fallback=global_cache.set(
+                    key=app_name, value={}, return_value=True
+                )
             )
-        )
-        
+        print('app_name_cache', app_name_cache)
+        '''
         try:
+            '''
+            
+            if id > 0 and cache:
+                cached_object = global_cache.get(
+                    key=app_name,
+                    second_key=id,
+                )
+                print('[get2] cached_object', cached_object)
+                if cached_object:
+                    return cached_object
+            '''
+            
             if id:
+                '''
                 if cache:
                     print('getting cache')
                     if is_bootstrap:
                         cached_object = global_cache.get(
-                            key=app_name, fallback=global_cache.set(
-                                key=app_name, value={}, return_value=True
-                            )
-                        ).get('bootstrap')
-                    else:
-                        cached_object = global_cache.get(
-                            key=app_name,
+                            key=f'{app_name}.{'bootstrap'}',
                             fallback=global_cache.set(
                                 key=app_name, value={}, return_value=True
                             )
-                        ).get(id)
+                        )
+                    else:
+                        cached_object = global_cache.get(
+                            key=f'{app_name}.{id}',
+                            fallback=global_cache.set(
+                                key=app_name, value={}, return_value=True
+                            )
+                        )
+                        print('[get] cached_object', cached_object)
                     if cached_object:
                         return cached_object
-                    
+                '''
                 get_object = dict(self.object.get(id))
                 if get_object:
+                    '''
                     if cache:
+                        print('setting cache')
                         global_cache.set(
                             key=app_name,
                             value={id: get_object},
@@ -343,7 +365,7 @@ class NetBoxBase:
                                 value={'bootstrap': get_object},
                                 return_value=True
                             )
-                            
+                    ''' 
                     return get_object
 
             if kwargs:

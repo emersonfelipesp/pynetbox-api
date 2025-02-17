@@ -1,6 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query, Path
 from fastapi.responses import JSONResponse
-
+from typing import List, Annotated, Any
 #from pynetbox_api import nb
 from pynetbox_api.exceptions import FastAPIException
 from pynetbox_api.api.routes import netbox_router
@@ -39,5 +39,38 @@ async def get_version():
     return {'version': nb.version}
 
 @app.get('/cache')
-async def get_cache():
-    return global_cache.return_cache()
+async def get_cache(
+    args: Annotated[str, Query(
+        title='Cache Key(s) - Development Use Only',
+        description='Cache key to retrieve. Use dot notation for nested keys.',
+        example='dcim.manufacturers.1'
+    )] = None
+):
+    if not args:
+        return global_cache.return_cache()
+    else:
+        print('args')
+        if '.' not in args:
+            return global_cache.get(key=args)
+        else:
+            print('dotted key')
+            
+            args = args.split('.')
+            return global_cache.get(*args)
+
+@app.post('/cache')
+async def set_cache(
+    key: str = Query(
+        ...,
+        title='Cache Key',
+        description='Cache key to set. Use dot notation for nested keys.',
+        example='dcim.manufacturers.1'
+    ),
+    value: Annotated[Any, Query(
+        ...,
+        title='Cache Value',
+        description='Cache value to set',
+        example='{"name": "Test"}'
+    )] = None
+):
+    return global_cache.set(key=key, value=value, return_value=True)
