@@ -5,7 +5,7 @@ from pydantic import BaseModel, RootModel
 from typing import List, Optional, Literal
 
 from pynetbox_api.dcim.manufacturer import Manufacturer
-from pynetbox_api.extras import Tags
+from pynetbox_api.extras.tag import Tags
 
 __all__ = [
     'DeviceType'

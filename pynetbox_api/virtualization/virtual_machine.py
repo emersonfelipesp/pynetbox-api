@@ -66,7 +66,7 @@ class VirtualMachine(NetBoxBase):
 
     class SchemaIn(BaseModel):
         name: str = 'Virtual Machine Placeholder'
-        role: str | None = None
+        role: int= Role(bootstrap_placeholder=True).id
         status: str = 'active'
         description: str | None = None
         serial: str | None = None
@@ -86,14 +86,13 @@ class VirtualMachine(NetBoxBase):
         disk: Optional[Union[int, float]] = None
         config_context: str | None = None
 
-
     SchemaList = RootModel[List[Schema]]
 
     # NetBox API endpoint: /virtualization/virtual-machines/
     app: str = 'virtualization'
     name: str = 'virtual_machines'
     
-    # Schema for  objects
+    # Schema for objects
     schema = Schema
     schema_in = SchemaIn
     schema_list = SchemaList

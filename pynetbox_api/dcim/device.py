@@ -6,7 +6,7 @@ from pynetbox_api.session import NetBoxBase
 from pynetbox_api.dcim.site import Site
 from pynetbox_api.dcim.device_role import DeviceRole
 from pynetbox_api.dcim.device_type import DeviceType
-from pynetbox_api.extras import Tags
+from pynetbox_api.extras.tag import Tags
 from pynetbox_api.virtualization.cluster import Cluster
 
 class Device(NetBoxBase):

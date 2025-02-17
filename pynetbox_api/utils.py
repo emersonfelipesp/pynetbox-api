@@ -1,7 +1,7 @@
 
 from pydantic import BaseModel
 from typing import List
-from pynetbox_api.extras import Tags
+from pynetbox_api.extras.tag import Tags
 
 class GenericSchema(BaseModel):
     tags: List[Tags.BasicSchema] = []
