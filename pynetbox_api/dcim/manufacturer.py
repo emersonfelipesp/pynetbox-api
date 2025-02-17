@@ -5,7 +5,7 @@ from typing import List
 
 from pynetbox_api.utils import GenericSchema
 from pynetbox_api.session import NetBoxBase
-from pynetbox_api.extras import Tags
+from pynetbox_api.extras.tag import Tags
 
 __all__ = [
     "ManufacturerSchema",
