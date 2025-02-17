@@ -5,6 +5,8 @@ from fastapi.responses import JSONResponse
 from pynetbox_api.exceptions import FastAPIException
 from pynetbox_api.api.routes import netbox_router
 
+from pynetbox_api.cache import global_cache
+
 app = FastAPI(
     title='pynetbox API',
     description='FastAPI wrapper for pynetbox',
@@ -35,3 +37,7 @@ async def homepage():
 @app.get('/version')
 async def get_version():
     return {'version': nb.version}
+
+@app.get('/cache')
+async def get_cache():
+    return global_cache.return_cache()

@@ -12,8 +12,10 @@ from typing_extensions import Doc
 from pydantic import BaseModel, RootModel
 from typing import List, Any, Optional, Union
 
+from fastapi import Query
 from fastapi.responses import JSONResponse
 from pynetbox_api.exceptions import FastAPIException
+from pynetbox_api.cache import global_cache
 
 NETBOX_URL = None
 NETBOX_TOKEN = None
@@ -152,7 +154,7 @@ class NetBoxBase:
             self.placeholder_dict = self._bootstrap_placeholder()
 
         if self.bootstrap_placeholder and self.placeholder_dict:
-            self.result = self.post(self.placeholder_dict)
+            self.result = self.post(self.placeholder_dict, cache=True, is_bootstrap=True)
             self.id = None
             try:
                 self.id = self.result.get('id', None)
@@ -194,9 +196,8 @@ class NetBoxBase:
                 python_exception=str(error)
             )
     
-    def _check_duplicate(self, json: dict) -> dict:
+    def _check_duplicate(self, json: dict, cache: bool, is_bootstrap: bool) -> dict:
         try:
-
             search_dict: dict = {}
             for field in self.unique_together:
                 if field == 'device':
@@ -226,8 +227,9 @@ class NetBoxBase:
 
                 else:
                     search_dict[field] = json.get(field)
-                
-            duplicate = self.get(**search_dict)
+            
+            
+            duplicate = self.get(**search_dict, cache=cache, is_bootstrap=is_bootstrap)
             
             if not duplicate:
                 return None
@@ -294,12 +296,60 @@ class NetBoxBase:
         id: int = 0,
         **kwargs
     ) -> dict:
+        cache = kwargs.get('cache', True)
+        is_bootstrap = kwargs.get('is_bootstrap', False)
+        
+        kwargs.pop('cache', None)
+        kwargs.pop('is_bootstrap', None)
+        
+        app_name = f'{self.app}.{self.name}'
+        app_name_cache = global_cache.get(app_name, global_cache.set(
+                key=app_name, value={}, return_value=True
+            )
+        )
+        
         try:
             if id:
-                return dict(self.object.get(id))
+                if cache:
+                    print('getting cache')
+                    if is_bootstrap:
+                        cached_object = global_cache.get(
+                            key=app_name, fallback=global_cache.set(
+                                key=app_name, value={}, return_value=True
+                            )
+                        ).get('bootstrap')
+                    else:
+                        cached_object = global_cache.get(
+                            key=app_name,
+                            fallback=global_cache.set(
+                                key=app_name, value={}, return_value=True
+                            )
+                        ).get(id)
+                    if cached_object:
+                        return cached_object
+                    
+                get_object = dict(self.object.get(id))
+                if get_object:
+                    if cache:
+                        global_cache.set(
+                            key=app_name,
+                            value={id: get_object},
+                            return_value=True
+                        )
+                        
+                        if is_bootstrap:
+                            global_cache.set(
+                                key=app_name,
+                                value={'bootstrap': get_object},
+                                return_value=True
+                            )
+                            
+                    return get_object
+
             if kwargs:
                 try:
                     return dict(self.object.get(**kwargs))
+
                 except ValueError:
                     try:
                         for first_object in self.object.filter(**kwargs):
@@ -327,7 +377,13 @@ class NetBoxBase:
             )
             
         
-    def post(self, json: dict, merge_with_placeholder: bool = True):
+    def post(
+        self,
+        json: dict,
+        merge_with_placeholder: bool = True,
+        cache: bool = True,
+        is_bootstrap: bool = False
+    ):
         # Check for missing obrigatory fields
         for field in self.unique_together:
             if json.get(field) is None:
@@ -338,7 +394,7 @@ class NetBoxBase:
         
         try:
             # Check if object already exists
-            duplicate = self._check_duplicate(json)
+            duplicate = self._check_duplicate(json, cache=cache, is_bootstrap=is_bootstrap)
             if duplicate:
                 return duplicate
         except Exception as error:
