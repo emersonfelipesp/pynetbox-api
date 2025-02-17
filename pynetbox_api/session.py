@@ -9,7 +9,7 @@ from typing import (
 )
 
 from typing_extensions import Doc
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 from typing import List, Any, Optional, Union
 
 from fastapi.responses import JSONResponse
@@ -159,14 +159,22 @@ class NetBoxBase:
             except:
                 self.id = getattr(self.result, 'id', None)
 
-    
+    # NetBox API Endpoint
     app: str = ''
     name: str = ''
+    
+    # Schemas
     schema = None
     schema_in = None
     schema_list = None
+    
+    # Unique constraints
     unique_together: list = []
+    required_fields: list = []
+    
+    # Placeholder object
     placeholder_dict: dict = {}
+    
     
     def _bootstrap_placeholder(self) -> dict:
         # Parse Pydantic Schema to JSON and construct the JSON object to be used as payload.
@@ -452,3 +460,11 @@ class NetBoxBase:
     class StatusSchema(BaseModel):
         value: str | None = None
         label: str | None = None
+    
+    class BasicSchema(BaseModel):
+        id: int | None = None
+        url: str | None = None
+        display: str | None = None
+        name: str | None = None
+        slug: str | None = None
+        description: str | None = None
