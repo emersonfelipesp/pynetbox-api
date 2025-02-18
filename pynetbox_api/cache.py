@@ -7,6 +7,7 @@ class Cache:
     def get(self, *args, key: Any = None, fallback: Any = {}) -> Any:
         if key:
             return self.cache.get(key, None)
+        
         print(f'get args: {args}')
         cache_value = None
         for key in args:
@@ -16,9 +17,13 @@ class Cache:
                     
                 else:
                     cache_value = cache_value[key]
+                
+                # If the last key is reached, return the value
+                if key == args[-1]:
+                    return cache_value
             except KeyError:
                 pass
-
+         
         return cache_value
         
     def set(self, *args, key: str | None = None, value: Any, return_value: bool = False) -> dict: 

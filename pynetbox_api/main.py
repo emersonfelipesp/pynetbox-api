@@ -34,9 +34,12 @@ async def fastapi_exception_handler(request, exc):
 async def homepage():
     return {'message': 'Welcome to pynetbox API'}
 
+'''
 @app.get('/version')
 async def get_version():
     return {'version': nb.version}
+'''
+
 
 @app.get('/cache')
 async def get_cache(
@@ -57,6 +60,7 @@ async def get_cache(
             
             args = args.split('.')
             return global_cache.get(*args)
+
 
 @app.post('/cache')
 async def set_cache(
