@@ -83,7 +83,7 @@ class NetBoxBase:
         instance = super().__new__(cls)
         
         # Check if the instance is being created with arguments
-        if kwargs:
+        if kwargs and not bootstrap_placeholder:
             try:
                 instance.use_placeholder = use_placeholder
                 instance.bootstrap_placeholder = bootstrap_placeholder
@@ -93,6 +93,7 @@ class NetBoxBase:
                 if instance.use_placeholder or instance.bootstrap_placeholder:
                     instance.placeholder_dict = instance._bootstrap_placeholder()
             
+                print('instance.placeholder_dict', instance.placeholder_dict)
                 print('instance.object', instance.object)
             except Exception as error:
                 raise FastAPIException(
@@ -102,8 +103,8 @@ class NetBoxBase:
                 )
             
             # Return post method result as the class instance
-            print('kwargs', kwargs)
-            result = instance.post(kwargs, merge_with_placeholder=use_placeholder)
+            print('kwargs2', kwargs)
+            result = instance.post(json=kwargs, merge_with_placeholder=use_placeholder)
 
             instance.id = result.get('id', None) if type(result) == dict else None
             instance.id = getattr(result, 'id', None) if type(result) != dict else None
@@ -404,13 +405,16 @@ class NetBoxBase:
         json: dict,
         merge_with_placeholder: bool = True,
         cache: bool = True,
-        is_bootstrap: bool = False
+        is_bootstrap: bool = False,
+        **kwargs,
     ):
+        print(f'json: {json}')
+        print(f'kwargs: {kwargs}')
         # Check for missing obrigatory fields
         for field in self.unique_together:
             if json.get(field) is None:
                 raise FastAPIException(
-                    message=f"Field '{field}'' is required to create object {self.app}.{self.name}",
+                    message=f"Field '{field}' is required to create object {self.app}.{self.name}",
                     status_code=400
                 )
         

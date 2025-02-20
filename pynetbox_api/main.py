@@ -12,6 +12,8 @@ app = FastAPI(
     description='FastAPI wrapper for pynetbox',
     version='0.1'
 )
+
+print('app')
 app.include_router(netbox_router)
 
 @app.exception_handler(FastAPIException)
@@ -40,6 +42,7 @@ async def get_version():
     return {'version': nb.version}
 '''
 
+print('get cache')
 
 @app.get('/cache')
 async def get_cache(
@@ -61,6 +64,7 @@ async def get_cache(
             args = args.split('.')
             return global_cache.get(*args)
 
+print('set cache')
 
 @app.post('/cache')
 async def set_cache(
