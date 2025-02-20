@@ -4,13 +4,22 @@ class Cache:
     def __init__(self):
         self.cache: dict = {}
     
-    def get(self, *args, key: Any = None, fallback: Any = {}) -> Any:
+    def get(self, *args: list, key: Any = None, fallback: Any = {}) -> Any:
+        print('cache get activated')
+        print(f'get args: {args}')
         if key:
             return self.cache.get(key, None)
         
-        print(f'get args: {args}')
+        keys = args[0].split('.') if '.' in args[0] else None
+        if keys is None:
+            return None
+        
+        print('')
+        
+        print('last key: ', args[-1])
+        print('keys: ', keys)
         cache_value = None
-        for key in args:
+        for key in keys:
             try:
                 if cache_value is None:
                     cache_value = self.cache[key]
@@ -19,12 +28,13 @@ class Cache:
                     cache_value = cache_value[key]
                 
                 # If the last key is reached, return the value
-                if key == args[-1]:
+                if key == keys[-1]:
                     return cache_value
             except KeyError:
                 pass
          
-        return cache_value
+        if cache_value is None:
+            return cache_value
         
     def set(self, *args, key: str | None = None, value: Any, return_value: bool = False) -> dict: 
         def dot_notation_to_dict(key, value) -> dict:
@@ -49,7 +59,7 @@ class Cache:
                     
                 # Set the value for the last key in the dot notation
                 d[keys[-1]] = value
-            return result
+            return dict(result) if result else None
         
         if '.' not in key:
             cached_value = self.cache[key] = value

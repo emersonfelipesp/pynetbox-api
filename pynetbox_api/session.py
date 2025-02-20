@@ -103,7 +103,6 @@ class NetBoxBase:
                 )
             
             # Return post method result as the class instance
-            print('kwargs2', kwargs)
             result = instance.post(json=kwargs, merge_with_placeholder=use_placeholder)
 
             instance.id = result.get('id', None) if type(result) == dict else None
@@ -304,70 +303,29 @@ class NetBoxBase:
         kwargs.pop('is_bootstrap', None)
         
         app_name = f'{self.app}.{self.name}'
-        '''
-        if cache:
-            app_name_cache = global_cache.get(
-                key=app_name,
-                fallback=global_cache.set(
-                    key=app_name, value={}, return_value=True
-                )
-            )
-        print('app_name_cache', app_name_cache)
-        '''
+
         try:
-            '''
-            
-            if id > 0 and cache:
-                cached_object = global_cache.get(
-                    key=app_name,
-                    second_key=id,
-                )
-                print('[get2] cached_object', cached_object)
-                if cached_object:
-                    return cached_object
-            '''
-            
             if id:
-                '''
+                cache = global_cache.get(f'{app_name}.{id}') if cache else None
+                print('get method: cache: ', cache)
                 if cache:
-                    print('getting cache')
-                    if is_bootstrap:
-                        cached_object = global_cache.get(
-                            key=f'{app_name}.{'bootstrap'}',
-                            fallback=global_cache.set(
-                                key=app_name, value={}, return_value=True
-                            )
-                        )
-                    else:
-                        cached_object = global_cache.get(
+                    return cache
+                else:
+                    get_object = dict(self.object.get(id))
+                    
+                    if get_object:
+                        global_cache.set(
                             key=f'{app_name}.{id}',
-                            fallback=global_cache.set(
-                                key=app_name, value={}, return_value=True
-                            )
+                            value=get_object
                         )
-                        print('[get] cached_object', cached_object)
-                    if cached_object:
-                        return cached_object
-                '''
+                        return get_object
+                
+
+                ''''
                 get_object = dict(self.object.get(id))
                 if get_object:
-                    '''
-                    if cache:
-                        print('setting cache')
-                        global_cache.set(
-                            key=app_name,
-                            value={id: get_object},
-                            return_value=True
-                        )
-                        
-                        if is_bootstrap:
-                            global_cache.set(
-                                key=app_name,
-                                value={'bootstrap': get_object},
-                                return_value=True
-                            )
-                    ''' 
                     return get_object
+                '''
 
             if kwargs:
                 try:
@@ -421,6 +379,7 @@ class NetBoxBase:
         try:
             # Check if object already exists
             duplicate = self._check_duplicate(json, cache=cache, is_bootstrap=is_bootstrap)
+            print(f'resultado duplicado: {duplicate} / {type(duplicate)}')
             if duplicate:
                 return duplicate
         except Exception as error:
@@ -432,7 +391,7 @@ class NetBoxBase:
         try:
             # Create object
             result = self._create_object(json=json)
-            
+            print(f'resultado: {result} / {type(result)}')
             if self.schema:
                 return self.schema(**result) if type(result) == dict else result
 
