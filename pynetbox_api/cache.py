@@ -5,8 +5,6 @@ class Cache:
         self.cache: dict = {}
     
     def get(self, *args: list, key: Any = None, fallback: Any = {}) -> Any:
-        print('cache get activated')
-        print(f'get args: {args}')
         if key:
             return self.cache.get(key, None)
         
@@ -14,10 +12,6 @@ class Cache:
         if keys is None:
             return None
         
-        print('')
-        
-        print('last key: ', args[-1])
-        print('keys: ', keys)
         cache_value = None
         for key in keys:
             try:

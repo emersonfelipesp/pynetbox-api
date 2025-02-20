@@ -76,6 +76,8 @@ class NetBoxBase:
         cls,
         nb: pynetbox.api = nb_from_env,
         bootstrap_placeholder: bool = False,
+        is_bootstrap: bool = False,
+        cache: bool = True,
         use_placeholder: bool = True,
         **kwargs
     ):
@@ -103,7 +105,12 @@ class NetBoxBase:
                 )
             
             # Return post method result as the class instance
-            result = instance.post(json=kwargs, merge_with_placeholder=use_placeholder)
+            result = instance.post(
+                json=kwargs,
+                cache=cache,
+                is_bootstrap=is_bootstrap,
+                merge_with_placeholder=use_placeholder
+            )
 
             instance.id = result.get('id', None) if type(result) == dict else None
             instance.id = getattr(result, 'id', None) if type(result) != dict else None
@@ -137,7 +144,10 @@ class NetBoxBase:
                 """
             )
         ] = True,
-        **kwargs):
+        **kwargs
+    ):
+        self.app_name = f'{self.app}.{self.name}'
+        
         try:
             self.object = getattr(getattr(nb, self.app), self.name)
         except Exception as error:
@@ -196,7 +206,7 @@ class NetBoxBase:
                 python_exception=str(error)
             )
     
-    def _check_duplicate(self, json: dict, cache: bool, is_bootstrap: bool) -> dict:
+    def _check_duplicate(self, json: dict, is_bootstrap: bool, cache: bool = True) -> dict:
         try:
             search_dict: dict = {}
             for field in self.unique_together:
@@ -239,15 +249,24 @@ class NetBoxBase:
         except Exception as error:
             return None
 
-    def _create_object(self, json: dict) -> dict:
+    def _create_object(self,
+        json: dict,
+        is_bootstrap: bool,
+        cache: bool = True
+    ) -> dict:
         try:
-            print('create_object_dict', json)
             result_object: dict = {}
             
             # Create placeholder object if 'bootstrap_placeholder' is True
             try:
                 if self.bootstrap_placeholder and self.placeholder_dict:
                     result_object = dict(self.object.create(**self.placeholder_dict))
+
+                    if cache and is_bootstrap:
+                        global_cache.set(
+                            key=f'{self.app}.{self.name}.bootstrap',
+                            value=result_object
+                        )
                     
                     # If object has a schema, it will return the object with the schema
                     return self.schema(**result_object) if self.schema else result_object
@@ -294,41 +313,40 @@ class NetBoxBase:
     def get(
         self,
         id: int = 0,
+        cache: bool = True,
+        is_bootstrap: bool = False,
         **kwargs
     ) -> dict:
-        cache = kwargs.get('cache', True)
-        is_bootstrap = kwargs.get('is_bootstrap', False)
-        
-        kwargs.pop('cache', None)
-        kwargs.pop('is_bootstrap', None)
-        
-        app_name = f'{self.app}.{self.name}'
-
         try:
             if id:
-                cache = global_cache.get(f'{app_name}.{id}') if cache else None
-                print('get method: cache: ', cache)
-                if cache:
-                    return cache
+                cache_object = global_cache.get(f'{self.app_name}.{id}') if cache else None
+                if cache_object:
+                    return cache_object
                 else:
                     get_object = dict(self.object.get(id))
                     
                     if get_object:
                         global_cache.set(
-                            key=f'{app_name}.{id}',
+                            key=f'{self.app_name}.{id}',
                             value=get_object
                         )
                         return get_object
-                
-
-                ''''
-                get_object = dict(self.object.get(id))
-                if get_object:
-                    return get_object
-                '''
 
             if kwargs:
                 try:
+                    if cache and is_bootstrap:
+                        cache_object = global_cache.get(f'{self.app_name}.bootstrap') if cache else None
+                        if cache_object:
+                            return cache_object
+                        
+                        get_object = dict(self.object.get(**kwargs))
+                        if get_object:
+                            global_cache.set(
+                                key=f'{self.app_name}.bootstrap',
+                                value=get_object
+                            )
+                        
+                        return get_object
                     return dict(self.object.get(**kwargs))
 
                 except ValueError:
@@ -366,8 +384,6 @@ class NetBoxBase:
         is_bootstrap: bool = False,
         **kwargs,
     ):
-        print(f'json: {json}')
-        print(f'kwargs: {kwargs}')
         # Check for missing obrigatory fields
         for field in self.unique_together:
             if json.get(field) is None:
@@ -377,9 +393,20 @@ class NetBoxBase:
                 )
         
         try:
+            if is_bootstrap:
+                cache_object = global_cache.get(f'{self.app_name}.bootstrap') if cache else None
+                if cache_object:
+                    return cache_object
+                
+        except Exception as error:
+            raise FastAPIException(
+                message=f"Error to check bootstrap object '{self.app}.{self.name}' on cache.",
+                python_exception=str(error)
+            )
+        
+        try:
             # Check if object already exists
             duplicate = self._check_duplicate(json, cache=cache, is_bootstrap=is_bootstrap)
-            print(f'resultado duplicado: {duplicate} / {type(duplicate)}')
             if duplicate:
                 return duplicate
         except Exception as error:
@@ -390,8 +417,7 @@ class NetBoxBase:
         
         try:
             # Create object
-            result = self._create_object(json=json)
-            print(f'resultado: {result} / {type(result)}')
+            result = self._create_object(json=json, cache=cache, is_bootstrap=is_bootstrap)
             if self.schema:
                 return self.schema(**result) if type(result) == dict else result
 

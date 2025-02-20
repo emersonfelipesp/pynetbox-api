@@ -13,7 +13,6 @@ def create_endpoints(
         return class_instance().all()
 
     async def get(id: int):
-        print('teste')
         return class_instance().get(id=id)
 
     async def placeholder():

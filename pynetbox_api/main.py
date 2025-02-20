@@ -55,14 +55,7 @@ async def get_cache(
     if not args:
         return global_cache.return_cache()
     else:
-        print('args')
-        if '.' not in args:
-            return global_cache.get(key=args)
-        else:
-            print('dotted key')
-            
-            args = args.split('.')
-            return global_cache.get(*args)
+        return global_cache.get(args)
 
 print('set cache')
 
