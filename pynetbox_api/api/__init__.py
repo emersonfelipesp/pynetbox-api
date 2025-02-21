@@ -16,7 +16,11 @@ def create_endpoints(
         return class_instance().get(id=id)
 
     async def placeholder():
-        return class_instance(bootstrap_placeholder=True).result
+        return class_instance(
+            bootstrap_placeholder=True,
+            is_bootstrap=True,
+            cache=True
+        ).result
 
     async def post(data: class_instance.schema_in):
         return class_instance(**data.model_dump(exclude_unset=True))
