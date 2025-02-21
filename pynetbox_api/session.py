@@ -1,6 +1,11 @@
 import requests
 import urllib3
 import pynetbox
+
+# json and hashlib are used to uniquely identify the objects in the cache
+import json
+import hashlib
+
 from typing import (
     Any,
     Annotated,
@@ -90,13 +95,15 @@ class NetBoxBase:
                 instance.use_placeholder = use_placeholder
                 instance.bootstrap_placeholder = bootstrap_placeholder
                 
+            
+                instance.app_name = f'{instance.app}.{instance.name}'
                 instance.object = getattr(getattr(nb, instance.app), instance.name)
                 
                 if instance.use_placeholder or instance.bootstrap_placeholder:
                     instance.placeholder_dict = instance._bootstrap_placeholder()
             
-                print('instance.placeholder_dict', instance.placeholder_dict)
-                print('instance.object', instance.object)
+                #print('instance.placeholder_dict', instance.placeholder_dict)
+                #print('instance.object', instance.object)
             except Exception as error:
                 raise FastAPIException(
                     message=f'Error to get object {instance.app}.{instance.name}',
@@ -187,6 +194,20 @@ class NetBoxBase:
     # Placeholder object
     placeholder_dict: dict = {}
     
+    def _generate_hash(self, data):
+        try:
+            json_string = json.dumps(data, sort_keys=True)  # Convert dictionary to JSON string
+            hash_object = hashlib.sha256(json_string.encode('utf-8'))  # Generate SHA-256 hash
+            return hash_object.hexdigest()  # Return the hash as a hexadecimal string
+        except Exception as error:
+            raise FastAPIException(
+                message='Error to generate hash object',
+                python_exception=str(error)
+            )
+        
+    
+    def _hash_object(self, json: dict) -> str:
+        return {self._generate_hash(json): json}
     
     def _bootstrap_placeholder(self) -> dict:
         # Parse Pydantic Schema to JSON and construct the JSON object to be used as payload.
@@ -209,36 +230,15 @@ class NetBoxBase:
     def _check_duplicate(self, json: dict, is_bootstrap: bool, cache: bool = True) -> dict:
         try:
             search_dict: dict = {}
+            names_to_append = ['device', 'module_bay', 'device_type', 'role', 'manufacturer', 'cluster_type']
+            
             for field in self.unique_together:
-                if field == 'device':
-                    device_id = int(json.get(field, 0))
-                    if device_id > 0:
-                        search_dict['device_id'] = device_id
-                        
-                elif field == 'module_bay':
-                    module_bay_id = int(json.get(field, 0))
-                    if module_bay_id > 0:
-                        search_dict['module_bay_id'] = module_bay_id
-                        
-                elif field == 'device_type':
-                    device_type_id = int(json.get(field, 0))
-                    if device_type_id > 0:
-                        search_dict['device_type_id'] = device_type_id
-                
-                elif field == 'role':
-                    role_id = int(json.get(field, 0))
-                    if role_id > 0:
-                        search_dict['role_id'] = role_id
-                        
-                elif field == 'manufacturer':
-                    manufacturer_id = int(json.get(field, 0))
-                    if manufacturer_id > 0:
-                        search_dict['manufacturer_id'] = manufacturer_id
-
+                if field in names_to_append:
+                    field_id = f'{field}_id'
+                    search_dict[field_id] = json.get(field, 0)
                 else:
                     search_dict[field] = json.get(field)
-            
-            
+
             duplicate = self.get(**search_dict, cache=cache, is_bootstrap=is_bootstrap)
             
             if not duplicate:
@@ -280,6 +280,12 @@ class NetBoxBase:
                 # If 'merge_with_placeholder' is True, it will merge the provided json with the placeholder
                 merged_json = self.placeholder_dict | json if self.use_placeholder else json
                 result_object = dict(self.object.create(**merged_json))
+                
+                if cache:
+                    global_cache.set(
+                        key=f'{self.app_name}.{self._generate_hash(merged_json)}',
+                        value=result_object
+                    )
                 
                 # If object has a schema, it will return the object with the schema
                 return result_object
@@ -334,19 +340,51 @@ class NetBoxBase:
 
             if kwargs:
                 try:
-                    if cache and is_bootstrap:
-                        cache_object = global_cache.get(f'{self.app_name}.bootstrap') if cache else None
-                        if cache_object:
-                            return cache_object
+                    if cache:
+                        if is_bootstrap:
+                            print('object is bootstrap')
+                            cache_object = global_cache.get(f'{self.app_name}.bootstrap') if cache else None
+                            if cache_object:
+                                return cache_object
+                            
+                            get_object = dict(self.object.get(**kwargs))
+                            if get_object:
+                                global_cache.set(
+                                    key=f'{self.app_name}.bootstrap',
+                                    value=get_object
+                                )
+                            return get_object
                         
-                        get_object = dict(self.object.get(**kwargs))
-                        if get_object:
-                            global_cache.set(
-                                key=f'{self.app_name}.bootstrap',
-                                value=get_object
+
+                        '''
+                        If cache is True, but not a bootstrap object: it will check if the object is in the cache using the hash key.
+                        If not, it will get the object from the NetBox API and then cache it for future requests.
+                        '''
+                        print('object is not bootstrap, but cached')
+                        try:
+                            hashed_key = self._generate_hash(data=dict(kwargs))
+                            cache_object = global_cache.get(f'{self.app_name}.{self._generate_hash(dict(kwargs))}') if cache else None
+                            if cache_object:
+                                return cache_object
+                            
+                            get_object = dict(self.object.get(**kwargs))
+                            if get_object:
+                                global_cache.set(
+                                    key=f'{self.app_name}.{self._generate_hash(kwargs)}',
+                                    value=get_object
+                                )
+                        
+                            return get_object
+                        except FastAPIException:
+                            raise
+                        except:
+                            raise FastAPIException(
+                                message=f'Error to get object {self.app}.{self.name}.',
+                                detail='Cache object not found using hash key.',
+                                python_exception=str(error)
                             )
-                        
-                        return get_object
+                    
+                    # If not using cache, it will get the object from the NetBox API
                     return dict(self.object.get(**kwargs))
 
                 except ValueError:
