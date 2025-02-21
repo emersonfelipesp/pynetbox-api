@@ -227,7 +227,13 @@ class NetBoxBase:
                 python_exception=str(error)
             )
     
-    def _check_duplicate(self, json: dict, is_bootstrap: bool, cache: bool = True) -> dict:
+    def _check_duplicate(
+        self,
+        json: dict,
+        unique_together_json: dict, 
+        is_bootstrap: bool,
+        cache: bool = True
+    ) -> dict:
         try:
             search_dict: dict = {}
             names_to_append = ['device', 'module_bay', 'device_type', 'role', 'manufacturer', 'cluster_type']
@@ -239,7 +245,7 @@ class NetBoxBase:
                 else:
                     search_dict[field] = json.get(field)
 
-            duplicate = self.get(**search_dict, cache=cache, is_bootstrap=is_bootstrap)
+            duplicate = self.get(**search_dict, cache=cache, unique_together_json=unique_together_json, is_bootstrap=is_bootstrap)
             
             if not duplicate:
                 return None
@@ -252,6 +258,7 @@ class NetBoxBase:
     def _create_object(self,
         json: dict,
         is_bootstrap: bool,
+        unique_together_json: dict,
         cache: bool = True
     ) -> dict:
         try:
@@ -281,9 +288,9 @@ class NetBoxBase:
                 merged_json = self.placeholder_dict | json if self.use_placeholder else json
                 result_object = dict(self.object.create(**merged_json))
                 
-                if cache:
+                if cache and result_object:
                     global_cache.set(
-                        key=f'{self.app_name}.{self._generate_hash(merged_json)}',
+                        key=f'{self.app_name}.{self._generate_hash(unique_together_json)}',
                         value=result_object
                     )
                 
@@ -318,6 +325,7 @@ class NetBoxBase:
 
     def get(
         self,
+        unique_together_json: dict,
         id: int = 0,
         cache: bool = True,
         is_bootstrap: bool = False,
@@ -360,17 +368,20 @@ class NetBoxBase:
                         If cache is True, but not a bootstrap object: it will check if the object is in the cache using the hash key.
                         If not, it will get the object from the NetBox API and then cache it for future requests.
                         '''
-                        print('object is not bootstrap, but cached')
+                        print('object is not bootstrap, but cached enabled')
                         try:
-                            hashed_key = self._generate_hash(data=dict(kwargs))
-                            cache_object = global_cache.get(f'{self.app_name}.{self._generate_hash(dict(kwargs))}') if cache else None
+                            hashed_key = self._generate_hash(data=dict(unique_together_json))
+                            print('hashed_key', hashed_key)
+                            cache_object = global_cache.get(f'{self.app_name}.{hashed_key}') if cache else None
                             if cache_object:
+                                print('cache_object found')
                                 return cache_object
                             
                             get_object = dict(self.object.get(**kwargs))
                             if get_object:
+                                print('get_object found, caching it.')
                                 global_cache.set(
-                                    key=f'{self.app_name}.{self._generate_hash(kwargs)}',
+                                    key=f'{self.app_name}.{hashed_key}',
                                     value=get_object
                                 )
                         
@@ -422,6 +433,7 @@ class NetBoxBase:
         is_bootstrap: bool = False,
         **kwargs,
     ):
+        unique_together_json = {}
         # Check for missing obrigatory fields
         for field in self.unique_together:
             if json.get(field) is None:
@@ -429,6 +441,8 @@ class NetBoxBase:
                     message=f"Field '{field}' is required to create object {self.app}.{self.name}",
                     status_code=400
                 )
+            else:
+                unique_together_json[field] = json.get(field)
         
         try:
             if is_bootstrap:
@@ -444,7 +458,7 @@ class NetBoxBase:
         
         try:
             # Check if object already exists
-            duplicate = self._check_duplicate(json, cache=cache, is_bootstrap=is_bootstrap)
+            duplicate = self._check_duplicate(json, unique_together_json=unique_together_json, cache=cache, is_bootstrap=is_bootstrap)
             if duplicate:
                 return duplicate
         except Exception as error:
@@ -455,7 +469,7 @@ class NetBoxBase:
         
         try:
             # Create object
-            result = self._create_object(json=json, cache=cache, is_bootstrap=is_bootstrap)
+            result = self._create_object(json=json, unique_together_json=unique_together_json, cache=cache, is_bootstrap=is_bootstrap)
             if self.schema:
                 return self.schema(**result) if type(result) == dict else result
 
