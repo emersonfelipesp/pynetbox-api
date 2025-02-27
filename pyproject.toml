@@ -11,5 +11,6 @@ dependencies = [
     "pynetbox>=7.4.1",
     "python-dotenv>=1.0.1",
     "requests>=2.32.3",
+    "sqlmodel>=0.0.22",
     "typer>=0.15.1",
 ]
