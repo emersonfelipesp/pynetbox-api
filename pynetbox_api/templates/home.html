@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUD Interface</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        input[type="text"], input[type="number"] {
+            padding: 5px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>CRUD Interface</h1>
+    <form id="addForm">
+        <input type="text" id="name" placeholder="Name" required>
+        <input type='text' id='ip_address' placeholder='IP Address' required>
+        <input type='number' id='port' placeholder='HTTP Port' required>
+        <input type='text' id='token' placeholder='Token' required>
+        <input type='checkbox' id='verify_ssl' placeholder='Verify SSL'>
+        <button type="submit">Add Item</button>
+    </form>
+    <table id="itemsTable">
+        <tr>
+            <th>ID</th>
+            <th>IP Address</th>
+            <th>HTTP Port</th>
+            <th>Token</th>
+            <th>Verify SSL</th>
+        </tr>
+    </table>
+    <script>
+        async function fetchItems() {
+            const response = await fetch('/endpoint');
+            const items = await response.json();
+            const table = document.getElementById('itemsTable');
+            table.innerHTML = `
+                <tr>
+                    <th>ID</th>
+                    <th>IP Address</th>
+                    <th>HTTP Port</th>
+                    <th>Token</th>
+                    <th>Verify SSL</th>
+                </tr>
+            `;
+            items.forEach(item => {
+                const row = table.insertRow();
+                row.insertCell(0).innerText = item.id;
+                row.insertCell(1).innerText = item.ip_address;
+                row.insertCell(2).innerText = item.port;
+                row.insertCell(3).innerText = item.token;
+                row.insertCell(4).innerText = item.verify_ssl;
+
+                const actionsCell = row.insertCell(5);
+
+                const editButton = document.createElement('button');
+                editButton.innerText = 'Edit';
+                editButton.onclick = () => editItem(item.id);
+                actionsCell.appendChild(editButton);
+                const deleteButton = document.createElement('button');
+                deleteButton.innerText = 'Delete';
+                deleteButton.onclick = () => deleteItem(item.id);
+                actionsCell.appendChild(deleteButton);
+            });
+        }
+
+        async function addItem(event) {
+            event.preventDefault();
+            const name = document.getElementById('name').value;
+            const ip_address = document.getElementById('ip_address').value;
+            const port = document.getElementById('port').value;
+            const token = document.getElementById('token').value;
+            const verify_ssl = document.getElementById('verify_ssl').checked;
+
+            await fetch('/endpoint', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name, ip_address, port, token, verify_ssl })
+            });
+            fetchItems();
+        }
+
+        async function editItem(id) {
+            const name = prompt('Enter new name:');
+            const ip_address = prompt('Enter new IP Address:');
+            const port = prompt('Enter new HTTP Port:');
+            const token = prompt('Enter new Token:');
+            const verify_ssl = prompt('Enter new Verify SSL:');
+            
+            if (name && age) {
+                await fetch(`/endpoint/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, age })
+                });
+                fetchItems();
+            }
+        }
+
+        async function deleteItem(id) {
+            await fetch(`/endpoint/${id}`, {
+                method: 'DELETE'
+            });
+            fetchItems();
+        }
+
+        document.getElementById('addForm').addEventListener('submit', addItem);
+        fetchItems();
+    </script>
+</body>
+</html>
