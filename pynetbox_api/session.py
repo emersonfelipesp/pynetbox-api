@@ -66,10 +66,16 @@ def _establish_from_env():
 def _establish_from_sql():
     from sqlmodel import select
     from pynetbox_api.database import NetBoxEndpoint, get_session
-    
+    from sqlalchemy.exc import OperationalError
     database_session = next(get_session())
-    netbox_endpoint = database_session.exec(select(NetBoxEndpoint)).first()
-    
+    try:
+        netbox_endpoint = database_session.exec(select(NetBoxEndpoint)).first()
+    except OperationalError as error:
+        # If table does not exist, create it.
+        from pynetbox_api.database import create_db_and_tables
+        create_db_and_tables()
+        netbox_endpoint = database_session.exec(select(NetBoxEndpoint)).first()
+        
     if netbox_endpoint:
         urllib3.disable_warnings()
 
@@ -128,13 +134,12 @@ class NetBoxBase:
         # Check if the NetBox API is reachable
         if not instance.check_status(): return instance
         
+        instance.use_placeholder = use_placeholder
+        instance.bootstrap_placeholder = bootstrap_placeholder
+                
         # Check if the instance is being created with arguments
         if kwargs and not bootstrap_placeholder:
             try:
-                instance.use_placeholder = use_placeholder
-                instance.bootstrap_placeholder = bootstrap_placeholder
-                
-            
                 instance.app_name = f'{instance.app}.{instance.name}'
                 instance.object = getattr(getattr(nb, instance.app), instance.name)
                 
@@ -151,7 +156,7 @@ class NetBoxBase:
                 )
             
             # Return post method result as the class instance
-            result = instance.post(
+            result: dict = instance.post(
                 json=kwargs,
                 cache=cache,
                 is_bootstrap=is_bootstrap,
@@ -161,11 +166,26 @@ class NetBoxBase:
             instance.id = result.get('id', None) if type(result) == dict else None
             instance.id = getattr(result, 'id', None) if type(result) != dict else None
             
-            return result if result else {}
+            return result
 
-        else:
-            # Return the instance as is if not being created with arguments
-            return instance
+        if bootstrap_placeholder:
+            try:
+                result: dict = instance.post(
+                    json=kwargs,
+                    cache=cache,
+                    is_bootstrap=is_bootstrap,
+                    merge_with_placeholder=use_placeholder
+                )
+                # Return the instance as is if being created with arguments
+                return result
+            except FastAPIException as error:
+                raise FastAPIException(
+                    message=f'Error to create object {instance.app}.{instance.name}',
+                    python_exception=str(error)
+                )
+        
+        # Return the instance as is if not being created with arguments
+        return instance
         
     def __init__(
         self,
@@ -291,7 +311,7 @@ class NetBoxBase:
     ) -> dict:
         try:
             search_dict: dict = {}
-            names_to_append = ['device', 'module_bay', 'device_type', 'role', 'manufacturer', 'cluster_type']
+            names_to_append = ['type', 'device', 'module_bay', 'device_type', 'role', 'manufacturer', 'cluster_type']
             
             for field in self.unique_together:
                 if field in names_to_append:
@@ -300,12 +320,17 @@ class NetBoxBase:
                 else:
                     search_dict[field] = json.get(field)
 
-            duplicate = self.get(**search_dict, cache=cache, unique_together_json=unique_together_json, is_bootstrap=is_bootstrap)
+            duplicate = self.get(
+                **search_dict,
+                cache=cache,
+                unique_together_json=unique_together_json,
+                is_bootstrap=is_bootstrap
+            )
             
             if not duplicate:
                 return None
             
-            return dict(duplicate)
+            return self.schema(**dict(duplicate)).dict()
             
         except Exception as error:
             return None
@@ -322,7 +347,7 @@ class NetBoxBase:
             # Create placeholder object if 'bootstrap_placeholder' is True
             try:
                 if self.bootstrap_placeholder and self.placeholder_dict:
-                    result_object = dict(self.object.create(**self.placeholder_dict))
+                    result_object = self.schema(**dict(self.object.create(**self.placeholder_dict))).dict()
 
                     if cache and is_bootstrap:
                         global_cache.set(
@@ -341,7 +366,7 @@ class NetBoxBase:
             try:
                 # If 'merge_with_placeholder' is True, it will merge the provided json with the placeholder
                 merged_json = self.placeholder_dict | json if self.use_placeholder else json
-                result_object = dict(self.object.create(**merged_json))
+                result_object = self.schema(**dict(self.object.create(**merged_json))).dict()
                 
                 if cache and result_object:
                     global_cache.set(
@@ -382,7 +407,7 @@ class NetBoxBase:
         self,
         unique_together_json: dict,
         id: int = 0,
-        cache: bool = True,
+        cache: bool = False,
         is_bootstrap: bool = False,
         **kwargs
     ) -> dict:
@@ -392,7 +417,7 @@ class NetBoxBase:
                 if cache_object:
                     return cache_object
                 else:
-                    get_object = dict(self.object.get(id))
+                    get_object = self.schema(**dict(self.object.get(id))).dict()
                     
                     if get_object:
                         global_cache.set(
@@ -410,7 +435,7 @@ class NetBoxBase:
                             if cache_object:
                                 return cache_object
                             
-                            get_object = dict(self.object.get(**kwargs))
+                            get_object = self.schema(**dict(self.object.get(**kwargs))).dict()
                             if get_object:
                                 global_cache.set(
                                     key=f'{self.app_name}.bootstrap',
@@ -423,18 +448,18 @@ class NetBoxBase:
                         If cache is True, but not a bootstrap object: it will check if the object is in the cache using the hash key.
                         If not, it will get the object from the NetBox API and then cache it for future requests.
                         '''
-                        print('object is not bootstrap, but cached enabled')
+                        #print('object is not bootstrap, but cached enabled')
                         try:
                             hashed_key = self._generate_hash(data=dict(unique_together_json))
-                            print('hashed_key', hashed_key)
+                            #print('hashed_key', hashed_key)
                             cache_object = global_cache.get(f'{self.app_name}.{hashed_key}') if cache else None
                             if cache_object:
-                                print('cache_object found')
+                                #print('cache_object found')
                                 return cache_object
                             
-                            get_object = dict(self.object.get(**kwargs))
+                            get_object = self.schema(**dict(self.object.get(**kwargs))).dict()
                             if get_object:
-                                print('get_object found, caching it.')
+                                #print('get_object found, caching it.')
                                 global_cache.set(
                                     key=f'{self.app_name}.{hashed_key}',
                                     value=get_object
@@ -451,12 +476,13 @@ class NetBoxBase:
                             )
                     
                     # If not using cache, it will get the object from the NetBox API
-                    return dict(self.object.get(**kwargs))
+                    # Receives dict, parse to schema and return as dict again.
+                    return self.schema(**dict(self.object.get(**kwargs))).dict()
 
                 except ValueError:
                     try:
                         for first_object in self.object.filter(**kwargs):
-                            return dict(first_object)
+                            return self.schema(**dict(first_object)).dict()
                         
                     except pynetbox.core.query.RequestError as error:
                         msg: str = f'Error to get object {self.app}.{self.name}\nError: {str(error)}\nPayload provided: {kwargs}'
@@ -484,7 +510,7 @@ class NetBoxBase:
         self,
         json: dict,
         merge_with_placeholder: bool = True,
-        cache: bool = True,
+        cache: bool = False,
         is_bootstrap: bool = False,
         **kwargs,
     ):
@@ -524,7 +550,12 @@ class NetBoxBase:
         
         try:
             # Create object
-            result = self._create_object(json=json, unique_together_json=unique_together_json, cache=cache, is_bootstrap=is_bootstrap)
+            result = self._create_object(
+                json=json,
+                unique_together_json=unique_together_json,
+                cache=cache,
+                is_bootstrap=is_bootstrap
+            )
             if self.schema:
                 return self.schema(**result) if type(result) == dict else result
 
