@@ -64,10 +64,41 @@ def _establish_from_env():
     
 
 def _establish_from_sql():
-    # TODO: Implement method to establish connection to NetBox using SQL database
-    pass
+    from sqlmodel import select
+    from pynetbox_api.database import NetBoxEndpoint, get_session
     
-nb_from_env = _establish_from_env()
+    database_session = next(get_session())
+    netbox_endpoint = database_session.exec(select(NetBoxEndpoint)).first()
+    
+    if netbox_endpoint:
+        urllib3.disable_warnings()
+
+        session = requests.Session()
+        session.verify = netbox_endpoint.verify_ssl
+
+        https_url = f'https://{netbox_endpoint.ip_address}:{netbox_endpoint.port}'
+        http_url = f'http://{netbox_endpoint.ip_address}:{netbox_endpoint.port}'
+        
+        url = https_url if netbox_endpoint.verify_ssl else http_url
+        try:
+            nb = pynetbox.api(
+                url,
+                token=netbox_endpoint.token,
+            )
+            nb.http_session = session
+
+            return nb
+        except Exception as error:
+            raise FastAPIException(
+                message=f'Error to connect to Netbox ({netbox_endpoint.url})',
+                python_exception=str(error)
+            )
+    
+    else:
+        print('NetBox Endpoint not found in the database.')
+        # If NetBox Endpoint is not found in the database, it will try return the connection from the environment variables
+        return _establish_from_env()
+
 
 class NetBoxBase:
     """
@@ -79,7 +110,7 @@ class NetBoxBase:
     """
     def __new__(
         cls,
-        nb: pynetbox.api = nb_from_env,
+        nb: pynetbox.api = _establish_from_sql(),
         bootstrap_placeholder: bool = False,
         is_bootstrap: bool = False,
         cache: bool = True,
@@ -88,6 +119,14 @@ class NetBoxBase:
     ):
         # Create a new instance of the class
         instance = super().__new__(cls)
+        
+        # Default values
+        instance.nb = nb
+        instance.id = 0
+        instance.result = {}
+                
+        # Check if the NetBox API is reachable
+        if not instance.check_status(): return instance
         
         # Check if the instance is being created with arguments
         if kwargs and not bootstrap_placeholder:
@@ -130,7 +169,7 @@ class NetBoxBase:
         
     def __init__(
         self,
-        nb: pynetbox.api = nb_from_env,
+        nb: pynetbox.api = _establish_from_sql(),
         bootstrap_placeholder: Annotated[
             bool,
             Doc(
@@ -153,6 +192,11 @@ class NetBoxBase:
         ] = True,
         **kwargs
     ):
+        # Check if the NetBox API is reachable
+        self.nb = nb
+        self.id = 0
+        if not self.check_status(): return
+        
         self.app_name = f'{self.app}.{self.name}'
         
         try:
@@ -178,6 +222,17 @@ class NetBoxBase:
             except:
                 self.id = getattr(self.result, 'id', None)
 
+    def check_status(self) -> bool:
+        try:
+            self.nb.status()
+            return True
+        except pynetbox.core.query.ContentError: print(f'Error to connect to NetBox API. The API URL is invalid.\n{error}')
+        except pynetbox.RequestError as error: print(f'Error to connect to NetBox API.\nError: {error}')
+        except FastAPIException as error: print(f'Unexpected error.\nError: {error}')
+        except Exception as error: print(f'Unexpected error.\nError: {error}')
+        
+        return False
+    
     # NetBox API Endpoint
     app: str = ''
     name: str = ''
