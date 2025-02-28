@@ -66,13 +66,13 @@ class VirtualMachine(NetBoxBase):
 
     class SchemaIn(BaseModel):
         name: str = 'Virtual Machine Placeholder'
-        role: int= Role(bootstrap_placeholder=True).id
+        role: int= Role(bootstrap_placeholder=True).get('id', 0)
         status: str = 'active'
         description: str | None = None
         serial: str | None = None
         tags: List[int] = []
         site: int | None = None
-        cluster: int = Cluster(bootstrap_placeholder=True).id
+        cluster: int = Cluster(bootstrap_placeholder=True).get('id', 0)
         device: int | None = None
         tenant_group: str | None = None
         tenant: str | None = None

@@ -64,14 +64,14 @@ class Device(NetBoxBase):
 
     class SchemaIn(BaseModel):
         name: str = 'Device Placeholder'
-        role: int = DeviceRole(bootstrap_placeholder=True).id
+        role: int = DeviceRole(bootstrap_placeholder=True).get('id', 0)
         description: str = 'Placeholder object for ease data ingestion'
-        tags: List[int] = [Tags(bootstrap_placeholder=True).id]
-        device_type: int = DeviceType(bootstrap_placeholder=True).id
+        tags: List[int] = [Tags(bootstrap_placeholder=True).get('id', 0)]
+        device_type: int = DeviceType(bootstrap_placeholder=True).get('id', 0)
         airflow: str | None = None
         serial: str | None = None
         asset_tag: str | None = None
-        site: int = Site(bootstrap_placeholder=True).id
+        site: int = Site(bootstrap_placeholder=True).get('id', 0)
         location: str | None = None
         position: int | None = None
         rack: str | None = None

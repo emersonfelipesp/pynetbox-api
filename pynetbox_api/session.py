@@ -130,7 +130,16 @@ class NetBoxBase:
         instance.nb = nb
         instance.id = 0
         instance.result = {}
-                
+    
+        try:
+            instance.app_name = f'{instance.app}.{instance.name}'
+            instance.object = getattr(getattr(nb, instance.app), instance.name)
+        except Exception as error:
+            raise FastAPIException(
+                message=f'Error to get object {instance.app}.{instance.name}',
+                detail='__new__ method',
+                python_exception=str(error)
+            )
         # Check if the NetBox API is reachable
         if not instance.check_status(): return instance
         
@@ -139,22 +148,6 @@ class NetBoxBase:
                 
         # Check if the instance is being created with arguments
         if kwargs and not bootstrap_placeholder:
-            try:
-                instance.app_name = f'{instance.app}.{instance.name}'
-                instance.object = getattr(getattr(nb, instance.app), instance.name)
-                
-                if instance.use_placeholder or instance.bootstrap_placeholder:
-                    instance.placeholder_dict = instance._bootstrap_placeholder()
-            
-                #print('instance.placeholder_dict', instance.placeholder_dict)
-                #print('instance.object', instance.object)
-            except Exception as error:
-                raise FastAPIException(
-                    message=f'Error to get object {instance.app}.{instance.name}',
-                    detail='__new__ method',
-                    python_exception=str(error)
-                )
-            
             # Return post method result as the class instance
             result: dict = instance.post(
                 json=kwargs,
@@ -169,16 +162,19 @@ class NetBoxBase:
             return result
 
         if bootstrap_placeholder:
+            instance.placeholder_dict = instance._bootstrap_placeholder()
+            print(f'instance.placeholder_dict: {instance.placeholder_dict}')
             try:
-                result: dict = instance.post(
-                    json=kwargs,
+                return instance.post(
+                    json=instance.placeholder_dict,
                     cache=cache,
-                    is_bootstrap=is_bootstrap,
+                    is_bootstrap=True,
                     merge_with_placeholder=use_placeholder
                 )
                 # Return the instance as is if being created with arguments
-                return result
+                
             except FastAPIException as error:
+                print(f'Bootstrap placeholder object failed. Error: {error}')
                 raise FastAPIException(
                     message=f'Error to create object {instance.app}.{instance.name}',
                     python_exception=str(error)
@@ -526,7 +522,7 @@ class NetBoxBase:
                 unique_together_json[field] = json.get(field)
         
         try:
-            if is_bootstrap:
+            if is_bootstrap and cache:
                 cache_object = global_cache.get(f'{self.app_name}.bootstrap') if cache else None
                 if cache_object:
                     return cache_object

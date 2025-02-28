@@ -43,7 +43,7 @@ class VMInterfaceSchema(GenericSchema, VMInterfaceBasicSchema):
 
 
 class VMInterfaceSchemaIn(BaseModel):
-    virtual_machine: int = VirtualMachine(bootstrap_placeholder=True).id
+    virtual_machine: int = VirtualMachine(bootstrap_placeholder=True).get('id', 0)
     name: str = 'Virtual Machine Interface Placeholder'
     enabled: bool = True
     description: str | None = None

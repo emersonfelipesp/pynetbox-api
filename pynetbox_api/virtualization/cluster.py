@@ -41,7 +41,7 @@ class Cluster(NetBoxBase):
 
     class SchemaIn(BaseModel):
         name: str = 'Cluster Placeholder'
-        type: int = ClusterType(bootstrap_placeholder=True).id
+        type: int = ClusterType(bootstrap_placeholder=True).get('id', 0)
         group: int | None = None
         status: str = 'active'
         description: str | None = None

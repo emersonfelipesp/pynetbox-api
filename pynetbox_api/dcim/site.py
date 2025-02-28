@@ -52,7 +52,7 @@ class Site(NetBoxBase):
         asns: list | None = None
         time_zone: str | None = None
         description: str = 'Placeholder object for ease data ingestion'
-        tags: List[int] = [Tags(bootstrap_placeholder=True).id]
+        tags: List[int] = [Tags(bootstrap_placeholder=True).get('id', 0)]
         tenant_group: str | None = None
         tenant: str | None = None
         physical_address: str | None = None
