@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from pydantic import BaseModel, RootModel, AnyHttpUrl
+from pydantic import BaseModel, RootModel
 from typing import List
 from pynetbox_api.virtualization.virtual_machine import VirtualMachine
 from pynetbox_api.utils import GenericSchema
@@ -16,7 +16,7 @@ __all__ = [
 
 class VMInterfaceBasicSchema(BaseModel):
     id: int | None = None
-    url: AnyHttpUrl | None = None
+    url: str | None = None
     display: str  | None = None
     name: str | None = None
     description: str | None = None

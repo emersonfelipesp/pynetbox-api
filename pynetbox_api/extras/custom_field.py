@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from pydantic import BaseModel, RootModel, AnyHttpUrl
+from pydantic import BaseModel, RootModel
 from typing import List, Optional, Union, Any
 from pynetbox_api.utils import GenericSchema
 from pynetbox_api.virtualization.cluster import Cluster
@@ -17,13 +17,13 @@ __all__ = [
 class CustomFieldChoice(NetBoxBase):
     class BasicSchema(BaseModel):
         id: int | None = None
-        url: AnyHttpUrl | None = None
+        url: str | None = None
         display: str  | None = None
         name: str | None = None
         description: str | None = None
     
     class Schema(GenericSchema, BasicSchema):
-        display_url: AnyHttpUrl | None = None
+        display_url: str | None = None
         base_choices: dict | None = None
         extra_choices: list[list] | None = None
         order_alphabetically: bool | None = None
@@ -59,13 +59,13 @@ class CustomFieldChoice(NetBoxBase):
 class CustomField(NetBoxBase):
     class BasicSchema(BaseModel):
         id: int | None = None
-        url: AnyHttpUrl | None = None
+        url: str | None = None
         display: str  | None = None
         name: str | None = None
         description: str | None = None
     
     class Schema(GenericSchema, BasicSchema):
-        display_url: AnyHttpUrl | None = None
+        display_url: str | None = None
         object_types: List[str] | None = None
         type: NetBoxBase.ValueLabelSchema | None = None
         related_object_type: Optional[Union[Any, None]] | None = None

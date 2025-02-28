@@ -163,7 +163,7 @@ class NetBoxBase:
 
         if bootstrap_placeholder:
             instance.placeholder_dict = instance._bootstrap_placeholder()
-            print(f'instance.placeholder_dict: {instance.placeholder_dict}')
+            #print(f'instance.placeholder_dict: {instance.placeholder_dict}')
             try:
                 return instance.post(
                     json=instance.placeholder_dict,
@@ -307,7 +307,7 @@ class NetBoxBase:
     ) -> dict:
         try:
             search_dict: dict = {}
-            names_to_append = ['type', 'device', 'module_bay', 'device_type', 'role', 'manufacturer', 'cluster_type']
+            names_to_append = ['type', 'device', 'module_bay', 'device_type', 'role', 'manufacturer', 'cluster_type', 'virtual_machine']
             
             for field in self.unique_together:
                 if field in names_to_append:
@@ -362,8 +362,9 @@ class NetBoxBase:
             try:
                 # If 'merge_with_placeholder' is True, it will merge the provided json with the placeholder
                 merged_json = self.placeholder_dict | json if self.use_placeholder else json
-                result_object = self.schema(**dict(self.object.create(**merged_json))).dict()
-                
+                print('merged_json: ', merged_json)
+                #result_object = self.schema(**dict(self.object.create(**merged_json))).dict()
+                result_object = dict(self.object.create(**merged_json))
                 if cache and result_object:
                     global_cache.set(
                         key=f'{self.app_name}.{self._generate_hash(unique_together_json)}',
@@ -426,7 +427,7 @@ class NetBoxBase:
                 try:
                     if cache:
                         if is_bootstrap:
-                            print('object is bootstrap')
+                            #print('object is bootstrap')
                             cache_object = global_cache.get(f'{self.app_name}.bootstrap') if cache else None
                             if cache_object:
                                 return cache_object

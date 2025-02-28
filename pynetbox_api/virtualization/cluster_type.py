@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from pydantic import BaseModel, RootModel, AnyHttpUrl
+from pydantic import BaseModel, RootModel
 from typing import List
 from pynetbox_api.utils import GenericSchema
 from pynetbox_api.session import NetBoxBase
@@ -13,7 +13,7 @@ __all__ = [
 class ClusterType(NetBoxBase):
     class BasicSchema(BaseModel):
         id: int | None = None
-        url: AnyHttpUrl | None = None
+        url: str | None = None
         display: str  | None = None
         name: str | None = None
         slug: str | None = None

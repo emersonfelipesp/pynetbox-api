@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from pydantic import BaseModel, RootModel, AnyHttpUrl
+from pydantic import BaseModel, RootModel
 from typing import List
 from pynetbox_api.virtualization.virtual_machine import VirtualMachine
 from pynetbox_api.utils import GenericSchema
@@ -12,18 +12,18 @@ __all__ = [
 class VirtualDisk(NetBoxBase):
     class BasicSchema(BaseModel):
         id: int | None = None
-        url: AnyHttpUrl | None = None
+        url: str | None = None
         display: str  | None = None
         name: str | None = None
         description: str | None = None
 
     class Schema(GenericSchema, BasicSchema):
-        display_url: AnyHttpUrl | None = None
+        display_url: str | None = None
         virtual_machine: VirtualMachine.BasicSchema | None = None
         size: int
 
     class SchemaIn(BaseModel):
-        virtual_machine: int = VirtualMachine(bootstrap_placeholder=True).id
+        virtual_machine: int = VirtualMachine(bootstrap_placeholder=True).get('id')
         name: str = 'Virtual Disk Placeholder'
         size: int = 1
         description: str | None = None
