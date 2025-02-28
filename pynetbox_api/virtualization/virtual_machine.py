@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from pydantic import BaseModel, RootModel, AnyHttpUrl
+from pydantic import BaseModel, RootModel
 from typing import List, Optional, Union
 from pynetbox_api.utils import GenericSchema
 from pynetbox_api.virtualization.cluster import Cluster
@@ -36,14 +36,14 @@ class VirtualMachine(NetBoxBase):
 
     class BasicSchema(BaseModel):
         id: int | None = None
-        url: AnyHttpUrl | None = None
+        url: str | None = None
         display: str  | None = None
         name: str | None = None
         description: str | None = None
 
 
     class Schema(GenericSchema, BasicSchema):
-        display_url: AnyHttpUrl | None = None
+        display_url: str | None = None
         status: NetBoxBase.ValueLabelSchema | None = None
         site: Site.BasicSchema | None = None
         cluster: Cluster.BasicSchema | None = None
@@ -66,13 +66,13 @@ class VirtualMachine(NetBoxBase):
 
     class SchemaIn(BaseModel):
         name: str = 'Virtual Machine Placeholder'
-        role: int= Role(bootstrap_placeholder=True).id
+        role: int= Role(bootstrap_placeholder=True).get('id', 0)
         status: str = 'active'
         description: str | None = None
         serial: str | None = None
         tags: List[int] = []
         site: int | None = None
-        cluster: int = Cluster(bootstrap_placeholder=True).id
+        cluster: int = Cluster(bootstrap_placeholder=True).get('id', 0)
         device: int | None = None
         tenant_group: str | None = None
         tenant: str | None = None
