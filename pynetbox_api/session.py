@@ -89,6 +89,13 @@ class NetBoxBase:
         # Create a new instance of the class
         instance = super().__new__(cls)
         
+        # Default values
+        instance.id = 0
+        instance.result = {}
+                
+        # Check if the NetBox API is reachable
+        if not instance.check_status(): return instance
+        
         # Check if the instance is being created with arguments
         if kwargs and not bootstrap_placeholder:
             try:
@@ -153,6 +160,10 @@ class NetBoxBase:
         ] = True,
         **kwargs
     ):
+        # Check if the NetBox API is reachable
+        self.id = 0
+        if not self.check_status(): return
+        
         self.app_name = f'{self.app}.{self.name}'
         
         try:
@@ -178,6 +189,17 @@ class NetBoxBase:
             except:
                 self.id = getattr(self.result, 'id', None)
 
+    def check_status(self) -> bool:
+        try:
+            self.nb.status()
+            return True
+        except pynetbox.core.query.ContentError: print(f'Error to connect to NetBox API. The API URL is invalid.\n{error}')
+        except pynetbox.RequestError as error: print(f'Error to connect to NetBox API.\nError: {error}')
+        except FastAPIException as error: print(f'Unexpected error.\nError: {error}')
+        except Exception as error: print(f'Unexpected error.\nError: {error}')
+        
+        return False
+    
     # NetBox API Endpoint
     app: str = ''
     name: str = ''
