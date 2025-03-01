@@ -211,9 +211,10 @@ class NetBoxBase:
         # Check if the NetBox API is reachable
         self.nb = nb
         self.id = 0
-        if not self.check_status(): return
-        
         self.app_name = f'{self.app}.{self.name}'
+        self.kwargs = kwargs
+        
+        if not self.check_status(): return
         
         try:
             self.object = getattr(getattr(nb, self.app), self.name)
@@ -324,12 +325,12 @@ class NetBoxBase:
             )
             
             if not duplicate:
-                return None
+                return {}
             
             return self.schema(**dict(duplicate)).dict()
             
         except Exception as error:
-            return None
+            return {}
 
     def _create_object(self,
         json: dict,
@@ -352,7 +353,7 @@ class NetBoxBase:
                         )
                     
                     # If object has a schema, it will return the object with the schema
-                    return self.schema(**result_object) if self.schema else result_object
+                    return result_object
             except Exception as error:
                 raise FastAPIException(
                     message=f'Error to create placeholder object {self.app}.{self.name}',
@@ -364,7 +365,8 @@ class NetBoxBase:
                 merged_json = self.placeholder_dict | json if self.use_placeholder else json
                 print('merged_json: ', merged_json)
                 #result_object = self.schema(**dict(self.object.create(**merged_json))).dict()
-                result_object = dict(self.object.create(**merged_json))
+                result_object = self.schema(**dict(self.object.create(**merged_json)))
+                
                 if cache and result_object:
                     global_cache.set(
                         key=f'{self.app_name}.{self._generate_hash(unique_together_json)}',
@@ -399,7 +401,7 @@ class NetBoxBase:
                 detail=f'Payload provided: {json}',
                 python_exception=str(error)
             )
-
+    
     def get(
         self,
         unique_together_json: dict,
@@ -553,8 +555,8 @@ class NetBoxBase:
                 cache=cache,
                 is_bootstrap=is_bootstrap
             )
-            if self.schema:
-                return self.schema(**result) if type(result) == dict else result
+            #if self.schema:
+            #    return self.schema(**result) if type(result) == dict else result
 
             print(f'[{self.app}.{self.name}] self.schema not found, returning raw JSON (dict)')
             return result
@@ -645,7 +647,7 @@ class NetBoxBase:
                 return []
             
             if self.schema:
-                return [self.schema(**dict(object)) for object in self.object.all()]
+                return [self.schema(**dict(object)).dict() for object in self.object.all()]
             else:
                 return self.object.all()
         except Exception as error:
