@@ -74,6 +74,9 @@ class Cache:
     def return_cache(self):
         return self.cache
 
+    def clear_cache(self):
+        self.cache = {}
+
 global_cache = Cache()
     
     
