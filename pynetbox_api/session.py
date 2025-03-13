@@ -144,11 +144,11 @@ class NetBoxBase:
                 python_exception=str(error)
             )
         # Check if the NetBox API is reachable
-        if not instance.check_status(): return instance
+        if not instance.check_status(): return {}
         
         instance.use_placeholder = use_placeholder
         instance.bootstrap_placeholder = bootstrap_placeholder
-                
+        
         # Check if the instance is being created with arguments
         if kwargs and not bootstrap_placeholder:
             # Return post method result as the class instance
@@ -162,6 +162,7 @@ class NetBoxBase:
             instance.id = result.get('id', None) if type(result) == dict else None
             instance.id = getattr(result, 'id', None) if type(result) != dict else None
             
+            print(result)
             return result if type(result) == dict else result.dict()
 
         if bootstrap_placeholder:
@@ -251,6 +252,8 @@ class NetBoxBase:
                 self.nb.status()
                 print('NetBox API status received successfully.')
                 NETBOX_STATUS = True
+                return NETBOX_STATUS
+            else:
                 return NETBOX_STATUS
         except pynetbox.core.query.ContentError:
             print(f'Error to connect to NetBox API. The API URL is invalid.\n{error}')
