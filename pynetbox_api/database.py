@@ -13,9 +13,11 @@ class NetBoxEndpoint(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True)
     ip_address: str = Field(index=True)
+    domain: str = Field(index=True)
     port: int = Field(default=443)
     token: str = Field()
     verify_ssl: bool = Field(default=True)
+    
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)

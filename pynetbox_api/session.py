@@ -31,6 +31,7 @@ except ImportError as error:
     print('Error to Import environment variables.')
     
 def _establish_from_env():
+    print('Trying to establish connection to NetBox using env.py file...')
     try:
         if not NETBOX_URL:
             print('NETBOX_URL environment variable not found.',)
@@ -64,6 +65,7 @@ def _establish_from_env():
     
 
 def _establish_from_sql():
+    print('Trying to establish connection to NetBox using SQL database...')
     from sqlmodel import select
     from pynetbox_api.database import NetBoxEndpoint, get_session
     from sqlalchemy.exc import OperationalError
@@ -240,13 +242,24 @@ class NetBoxBase:
                 self.id = getattr(self.result, 'id', None)
 
     def check_status(self) -> bool:
+        base_message: str = 'Unexpected error to connect to NetBox API using check_status() method.'
         try:
+            print('Trying to get NetBox API status...')
             self.nb.status()
             return True
         except pynetbox.core.query.ContentError: print(f'Error to connect to NetBox API. The API URL is invalid.\n{error}')
         except pynetbox.RequestError as error: print(f'Error to connect to NetBox API.\nError: {error}')
-        except FastAPIException as error: print(f'Unexpected error.\nError: {error}')
-        except Exception as error: print(f'Unexpected error.\nError: {error}')
+        except requests.exceptions.SSLError as error:
+            # Error: HTTPSConnectionPool(host='10.0.30.200', port=443): Max retries exceeded with url: /api/status/
+            # (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)')))
+            # This error happens when the certificate is self-signed.
+            # The "solution" is to disable the SSL verification.
+            print(f'SSL Error trying to connect to NetBox API.\nError: {error}')
+            self.nb.http_session.verify = False
+            return self.check_status()
+        
+        except FastAPIException as error: print(f'{base_message}\nError: {error}')
+        except Exception as error: print(f'{base_message}.\nError: {error}')
         
         return False
     
