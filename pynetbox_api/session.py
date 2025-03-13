@@ -107,6 +107,7 @@ def _establish_from_sql():
         # If NetBox Endpoint is not found in the database, it will try return the connection from the environment variables
         return _establish_from_env()
 
+NETBOX_STATUS: bool = False
 
 class NetBoxBase:
     """
@@ -161,7 +162,7 @@ class NetBoxBase:
             instance.id = result.get('id', None) if type(result) == dict else None
             instance.id = getattr(result, 'id', None) if type(result) != dict else None
             
-            return result
+            return result if type(result) == dict else result.dict()
 
         if bootstrap_placeholder:
             instance.placeholder_dict = instance._bootstrap_placeholder()
@@ -242,13 +243,21 @@ class NetBoxBase:
                 self.id = getattr(self.result, 'id', None)
 
     def check_status(self) -> bool:
+        global NETBOX_STATUS
         base_message: str = 'Unexpected error to connect to NetBox API using check_status() method.'
         try:
-            print('Trying to get NetBox API status...')
-            self.nb.status()
-            return True
-        except pynetbox.core.query.ContentError: print(f'Error to connect to NetBox API. The API URL is invalid.\n{error}')
-        except pynetbox.RequestError as error: print(f'Error to connect to NetBox API.\nError: {error}')
+            if NETBOX_STATUS == False:
+                print('Trying to get NetBox API status...')
+                self.nb.status()
+                print('NetBox API status received successfully.')
+                NETBOX_STATUS = True
+                return NETBOX_STATUS
+        except pynetbox.core.query.ContentError:
+            print(f'Error to connect to NetBox API. The API URL is invalid.\n{error}')
+            NETBOX_STATUS = False
+        except pynetbox.RequestError as error:
+            print(f'Error to connect to NetBox API.\nError: {error}')
+            NETBOX_STATUS = False
         except requests.exceptions.SSLError as error:
             # Error: HTTPSConnectionPool(host='10.0.30.200', port=443): Max retries exceeded with url: /api/status/
             # (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)')))
