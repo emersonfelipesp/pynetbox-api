@@ -22,8 +22,8 @@ from fastapi.responses import JSONResponse
 from pynetbox_api.exceptions import FastAPIException
 from pynetbox_api.cache import global_cache
 
-NETBOX_URL = None
-NETBOX_TOKEN = None
+NETBOX_URL = "https://netbox.example.com"
+NETBOX_TOKEN = "provide-your-token"
 
 try:
     from pynetbox_api.env import NETBOX_URL, NETBOX_TOKEN
