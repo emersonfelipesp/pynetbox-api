@@ -62,7 +62,6 @@ def _establish_from_env():
         print(f'Error to load environment variables.\n{error}')
     except Exception as error:
         print(f'Unexpected error. {error}')
-    
 
 def _establish_from_sql():
     print('Trying to establish connection to NetBox using SQL database...')
@@ -82,8 +81,10 @@ def _establish_from_sql():
         urllib3.disable_warnings()
 
         session = requests.Session()
-        session.verify = netbox_endpoint.verify_ssl
-
+        
+        #session.verify = netbox_endpoint.verify_ssl
+        session.verify = False
+        
         https_url = f'https://{netbox_endpoint.ip_address}:{netbox_endpoint.port}'
         http_url = f'http://{netbox_endpoint.ip_address}:{netbox_endpoint.port}'
         
@@ -108,6 +109,8 @@ def _establish_from_sql():
         return _establish_from_env()
 
 NETBOX_STATUS: bool = False
+
+RawNetBoxSession = _establish_from_sql()
 
 class NetBoxBase:
     """
@@ -429,26 +432,37 @@ class NetBoxBase:
     
     def get(
         self,
-        unique_together_json: dict,
+        unique_together_json: dict = {},
         id: int = 0,
         cache: bool = False,
         is_bootstrap: bool = False,
         **kwargs
     ) -> dict:
+        print('id: ', id)
         try:
             if id:
-                cache_object = global_cache.get(f'{self.app_name}.{id}') if cache else None
-                if cache_object:
-                    return cache_object
-                else:
-                    get_object = self.schema(**dict(self.object.get(id))).dict()
-                    
-                    if get_object:
+                get_object = None
+                if cache:
+                    cache_object = global_cache.get(f'{self.app_name}.{id}') if cache else None
+                    if cache_object:
+                        return cache_object
+                    else:
+                        get_object = self.object.get(id)
+                
+
+                get_object = self.object.get(id)
+                
+                if get_object:
+                    if cache:
                         global_cache.set(
                             key=f'{self.app_name}.{id}',
                             value=get_object
                         )
-                        return get_object
+                        
+                    return self.schema(**dict(get_object)).dict()
+                
+                return get_object
+
 
             if kwargs:
                 try:

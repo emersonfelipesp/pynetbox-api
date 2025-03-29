@@ -8,6 +8,7 @@ from pynetbox_api.dcim.device_role import DeviceRole as Role
 from pynetbox_api.session import NetBoxBase
 from pynetbox_api.ipam.ip_address import IPAddress
 from pynetbox_api.dcim.device import Device
+from pynetbox_api.dcim.platform import Platform
     
 __all__ = [
     'VirtualMachine',
@@ -51,7 +52,7 @@ class VirtualMachine(NetBoxBase):
         serial: str | None = None
         role: Role.BasicSchema | None = None
         tenant: str | None = None # TenantBasicSchema
-        platform: str | None = None
+        platform: Platform.BasicSchema | None = None
         primary_ip: IPAddress.BasicSchema | None = None
         primary_ip4: IPAddress.BasicSchema | None = None
         primary_ip6: IPAddress.BasicSchema | None = None
