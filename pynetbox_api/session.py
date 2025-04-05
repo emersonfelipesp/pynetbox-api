@@ -82,7 +82,9 @@ def _establish_from_sql():
         from pynetbox_api.database import create_db_and_tables
         create_db_and_tables()
         netbox_endpoint = database_session.exec(select(NetBoxEndpoint)).first()
-        
+    
+    
+    
     if netbox_endpoint:
         urllib3.disable_warnings()
 
@@ -101,7 +103,7 @@ def _establish_from_sql():
                 token=netbox_endpoint.token,
             )
             nb.http_session = session
-
+            
             return nb
         except Exception as error:
             raise FastAPIException(
@@ -114,7 +116,8 @@ def _establish_from_sql():
         # If NetBox Endpoint is not found in the database, it will try return the connection from the environment variables
         #return _establish_from_env()
         return None
-RawNetBoxSession = _establish_from_sql()
+    
+RawNetBoxSession = _establish_from_sql
 
 class NetBoxBase:
     """
