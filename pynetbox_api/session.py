@@ -24,7 +24,9 @@ from pynetbox_api.cache import global_cache
 
 NETBOX_URL = "https://netbox.example.com"
 NETBOX_TOKEN = "provide-your-token"
+NETBOX_STATUS: bool = False
 
+'''
 try:
     from pynetbox_api.env import NETBOX_URL, NETBOX_TOKEN
 except ImportError as error:
@@ -62,17 +64,21 @@ def _establish_from_env():
         print(f'Error to load environment variables.\n{error}')
     except Exception as error:
         print(f'Unexpected error. {error}')
+'''
 
 def _establish_from_sql():
     print('Trying to establish connection to NetBox using SQL database...')
+    
     from sqlmodel import select
     from pynetbox_api.database import NetBoxEndpoint, get_session
     from sqlalchemy.exc import OperationalError
+    
     database_session = next(get_session())
     try:
         netbox_endpoint = database_session.exec(select(NetBoxEndpoint)).first()
     except OperationalError as error:
         # If table does not exist, create it.
+        print('Table does not exist, creating it...')
         from pynetbox_api.database import create_db_and_tables
         create_db_and_tables()
         netbox_endpoint = database_session.exec(select(NetBoxEndpoint)).first()
@@ -106,10 +112,8 @@ def _establish_from_sql():
     else:
         print('NetBox Endpoint not found in the database.')
         # If NetBox Endpoint is not found in the database, it will try return the connection from the environment variables
-        return _establish_from_env()
-
-NETBOX_STATUS: bool = False
-
+        #return _establish_from_env()
+        return None
 RawNetBoxSession = _establish_from_sql()
 
 class NetBoxBase:
@@ -129,6 +133,10 @@ class NetBoxBase:
         use_placeholder: bool = True,
         **kwargs
     ):
+        if not nb:
+            print('NetBox API connection not found.')
+            return {}
+        
         # Create a new instance of the class
         instance = super().__new__(cls)
         

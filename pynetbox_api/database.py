@@ -20,6 +20,8 @@ class NetBoxEndpoint(SQLModel, table=True):
     
 
 def create_db_and_tables():
+    # Drop existing tables and recreate them to ensure schema changes are applied
+    SQLModel.metadata.drop_all(engine)
     SQLModel.metadata.create_all(engine)
 
 def get_session():
