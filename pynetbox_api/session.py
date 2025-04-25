@@ -22,9 +22,11 @@ from fastapi.responses import JSONResponse
 from pynetbox_api.exceptions import FastAPIException
 from pynetbox_api.cache import global_cache
 
+# Global variables for NetBox connection
 NETBOX_URL = "https://netbox.example.com"
 NETBOX_TOKEN = "provide-your-token"
 NETBOX_STATUS: bool = False
+NETBOX_SESSION = None  # Global session variable
 
 '''
 try:
@@ -67,6 +69,12 @@ def _establish_from_env():
 '''
 
 def _establish_from_sql():
+    global NETBOX_SESSION, NETBOX_STATUS
+    
+    # If we already have a working session, return it
+    if NETBOX_SESSION and NETBOX_STATUS:
+        return NETBOX_SESSION
+        
     print('Trying to establish connection to NetBox using SQL database...')
     
     from sqlmodel import select
@@ -83,14 +91,10 @@ def _establish_from_sql():
         create_db_and_tables()
         netbox_endpoint = database_session.exec(select(NetBoxEndpoint)).first()
     
-    
-    
     if netbox_endpoint:
         urllib3.disable_warnings()
 
         session = requests.Session()
-        
-        #session.verify = netbox_endpoint.verify_ssl
         session.verify = False
         
         https_url = f'https://{netbox_endpoint.ip_address}:{netbox_endpoint.port}'
@@ -98,14 +102,20 @@ def _establish_from_sql():
         
         url = https_url if netbox_endpoint.verify_ssl else http_url
         try:
-            nb = pynetbox.api(
+            NETBOX_SESSION = pynetbox.api(
                 url,
                 token=netbox_endpoint.token,
             )
-            nb.http_session = session
+            NETBOX_SESSION.http_session = session
             
-            return nb
+            # Test the connection
+            NETBOX_SESSION.status()
+            NETBOX_STATUS = True
+            
+            return NETBOX_SESSION
         except Exception as error:
+            NETBOX_STATUS = False
+            NETBOX_SESSION = None
             raise FastAPIException(
                 message=f'Error to connect to Netbox ({netbox_endpoint.url})',
                 python_exception=str(error)
@@ -113,8 +123,8 @@ def _establish_from_sql():
     
     else:
         print('NetBox Endpoint not found in the database.')
-        # If NetBox Endpoint is not found in the database, it will try return the connection from the environment variables
-        #return _establish_from_env()
+        NETBOX_STATUS = False
+        NETBOX_SESSION = None
         return None
     
 RawNetBoxSession = _establish_from_sql
@@ -258,23 +268,26 @@ class NetBoxBase:
                 self.id = getattr(self.result, 'id', None)
 
     def check_status(self) -> bool:
-        global NETBOX_STATUS
+        global NETBOX_STATUS, NETBOX_SESSION
         base_message: str = 'Unexpected error to connect to NetBox API using check_status() method.'
         try:
-            if NETBOX_STATUS == False:
+            if NETBOX_STATUS == False or NETBOX_SESSION is None:
                 print('Trying to get NetBox API status...')
                 self.nb.status()
                 print('NetBox API status received successfully.')
                 NETBOX_STATUS = True
+                NETBOX_SESSION = self.nb
                 return NETBOX_STATUS
             else:
                 return NETBOX_STATUS
-        except pynetbox.core.query.ContentError:
+        except pynetbox.core.query.ContentError as error:
             print(f'Error to connect to NetBox API. The API URL is invalid.\n{error}')
             NETBOX_STATUS = False
+            NETBOX_SESSION = None
         except pynetbox.RequestError as error:
             print(f'Error to connect to NetBox API.\nError: {error}')
             NETBOX_STATUS = False
+            NETBOX_SESSION = None
         except requests.exceptions.SSLError as error:
             # Error: HTTPSConnectionPool(host='10.0.30.200', port=443): Max retries exceeded with url: /api/status/
             # (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)')))
@@ -284,8 +297,14 @@ class NetBoxBase:
             self.nb.http_session.verify = False
             return self.check_status()
         
-        except FastAPIException as error: print(f'{base_message}\nError: {error}')
-        except Exception as error: print(f'{base_message}.\nError: {error}')
+        except FastAPIException as error: 
+            print(f'{base_message}\nError: {error}')
+            NETBOX_STATUS = False
+            NETBOX_SESSION = None
+        except Exception as error: 
+            print(f'{base_message}.\nError: {error}')
+            NETBOX_STATUS = False
+            NETBOX_SESSION = None
         
         return False
     
