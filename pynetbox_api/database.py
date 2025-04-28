@@ -14,10 +14,17 @@ class NetBoxEndpoint(SQLModel, table=True):
     name: str = Field(index=True)
     ip_address: str = Field(index=True)
     domain: str = Field(index=True)
-    port: int = Field(default=443)
+    port: int = Field(default=443)  # Default to HTTPS port
     token: str = Field()
     verify_ssl: bool = Field(default=True)
     
+    @property
+    def url(self) -> str:
+        """Construct the full URL for the NetBox endpoint."""
+        # Use HTTPS if port is 443 or verify_ssl is True
+        protocol = 'https' if self.port == 443 or self.verify_ssl else 'http'
+        host = self.domain if self.domain else self.ip_address.split('/')[0]
+        return f"{protocol}://{host}:{self.port}"
 
 def create_db_and_tables():
     # Drop existing tables and recreate them to ensure schema changes are applied
