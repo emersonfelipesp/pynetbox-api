@@ -178,7 +178,7 @@ class NetBoxBase:
     ):
         if not nb:
             print('NetBox API connection not found.')
-            return {}
+            NETBOX_STATUS = False
         
         # Create a new instance of the class
         instance = super().__new__(cls)
@@ -353,6 +353,7 @@ class NetBoxBase:
     
     # Placeholder object
     placeholder_dict: dict = {}
+    json: dict = {}
     
     def _generate_hash(self, data):
         try:
@@ -415,7 +416,7 @@ class NetBoxBase:
             if not duplicate:
                 return {}
             
-            return self.schema(**dict(duplicate)).dict()
+            return self.schema(**dict(duplicate)).model_dump()
             
         except Exception as error:
             return {}
@@ -432,7 +433,7 @@ class NetBoxBase:
             # Create placeholder object if 'bootstrap_placeholder' is True
             try:
                 if self.bootstrap_placeholder and self.placeholder_dict:
-                    result_object = self.schema(**dict(self.object.create(**self.placeholder_dict))).dict()
+                    result_object = self.schema(**dict(self.object.create(**self.placeholder_dict))).model_dump()
 
                     if cache and is_bootstrap:
                         global_cache.set(
@@ -519,7 +520,7 @@ class NetBoxBase:
                             value=get_object
                         )
                         
-                    return self.schema(**dict(get_object)).dict()
+                    return self.schema(**dict(get_object)).model_dump()
                 
                 return get_object
 
@@ -533,7 +534,7 @@ class NetBoxBase:
                             if cache_object:
                                 return cache_object
                             
-                            get_object = self.schema(**dict(self.object.get(**kwargs))).dict()
+                            get_object = self.schema(**dict(self.object.get(**kwargs))).model_dump()
                             if get_object:
                                 global_cache.set(
                                     key=f'{self.app_name}.bootstrap',
@@ -555,7 +556,7 @@ class NetBoxBase:
                                 #print('cache_object found')
                                 return cache_object
                             
-                            get_object = self.schema(**dict(self.object.get(**kwargs))).dict()
+                            get_object = self.schema(**dict(self.object.get(**kwargs))).model_dump()
                             if get_object:
                                 #print('get_object found, caching it.')
                                 global_cache.set(
@@ -575,12 +576,12 @@ class NetBoxBase:
                     
                     # If not using cache, it will get the object from the NetBox API
                     # Receives dict, parse to schema and return as dict again.
-                    return self.schema(**dict(self.object.get(**kwargs))).dict()
+                    return self.schema(**dict(self.object.get(**kwargs))).model_dump()
 
                 except ValueError:
                     try:
                         for first_object in self.object.filter(**kwargs):
-                            return self.schema(**dict(first_object)).dict()
+                            return self.schema(**dict(first_object)).model_dump()
                         
                     except pynetbox.core.query.RequestError as error:
                         msg: str = f'Error to get object {self.app}.{self.name}\nError: {str(error)}\nPayload provided: {kwargs}'
@@ -746,7 +747,7 @@ class NetBoxBase:
                 return []
             
             if self.schema:
-                return [self.schema(**dict(object)).dict() for object in self.object.all()]
+                return [self.schema(**dict(object)).model_dump() for object in self.object.all()]
             else:
                 return self.object.all()
         except Exception as error:
