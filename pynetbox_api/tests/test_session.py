@@ -50,17 +50,11 @@ def establish_pynetbox_session(
         pynetbox.api: A configured pynetbox API session object
     """
     
-    if use_token:
-        return pynetbox.api(
-            url,
-            token=token,
-        )
-    else:
-        return pynetbox.api(
-            url,
-            username=username,
-            password=password,
-        )
+    return pynetbox.api(
+        url,
+        token=token,
+    )
+
 
 
 def login_to_demo_site() -> requests.Session | None:
@@ -124,7 +118,7 @@ def test_session(nb: pynetbox.api = establish_pynetbox_session()) -> dict | None
     """Tests the NetBox API session by attempting to retrieve the system status.
 
     This function implements a robust error handling mechanism:
-    1. Attempts to get system status
+    1. Attempts to get system status with existing token
     2. If token is invalid:
        - Tries to create a new token
        - If username/password is invalid, attempts web login
@@ -142,16 +136,20 @@ def test_session(nb: pynetbox.api = establish_pynetbox_session()) -> dict | None
     except pynetbox.core.query.RequestError as e:
         if '403 Forbidden' and 'Invalid token' in str(e):
             try:
-                nb.create_token(DEMO_USER_NAME, DEMO_PASSWORD)
+                # Try to create a new token only if the existing one is invalid
+                token = nb.create_token(DEMO_USER_NAME, DEMO_PASSWORD)
+                # Update the session with the new token
+                nb.token = token.key
                 return nb.status()
             except pynetbox.core.query.RequestError as e:
-                
                 try:
                     if 'Invalid username/password' in str(e):
                         print(f'Invalid username/password: {e}')
                         login_to_demo_site()
                         
-                        nb.create_token(DEMO_USER_NAME, DEMO_PASSWORD)
+                        token = nb.create_token(DEMO_USER_NAME, DEMO_PASSWORD)
+                        # Update the session with the new token
+                        nb.token = token.key
                         return nb.status()
                     else:
                         print(f'Error to create token: {e}')
