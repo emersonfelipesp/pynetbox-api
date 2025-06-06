@@ -68,7 +68,7 @@ def _establish_from_env():
         print(f'Unexpected error. {error}')
 '''
 
-def _establish_from_sql():
+def _establish_from_sql() -> pynetbox.api | None:
     global NETBOX_SESSION, NETBOX_STATUS
     
     # If we already have a working session, return it
@@ -149,13 +149,13 @@ def _establish_from_sql():
                 continue
         
         print('All connection attempts failed')
-        return False
+        return None
     
     else:
         print('NetBox Endpoint not found in the database.')
         NETBOX_STATUS = False
         NETBOX_SESSION = None
-        return False
+        return None
     
 RawNetBoxSession = _establish_from_sql
 
@@ -188,6 +188,10 @@ class NetBoxBase:
         instance.id = 0
         instance.result = {}
     
+        if nb is None:
+            print('Not able to establish connection to NetBox API.')
+            return instance.result
+        
         try:
             instance.app_name = f'{instance.app}.{instance.name}'
             instance.object = getattr(getattr(nb, instance.app), instance.name)
