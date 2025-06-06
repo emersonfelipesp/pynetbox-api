@@ -22,142 +22,111 @@ from fastapi.responses import JSONResponse
 from pynetbox_api.exceptions import FastAPIException
 from pynetbox_api.cache import global_cache
 
+#
+# Database connection imports
+#
+from sqlmodel import select
+from pynetbox_api.database import NetBoxEndpoint, get_session
+from sqlalchemy.exc import OperationalError
+from pynetbox_api.database import create_db_and_tables
+
 # Global variables for NetBox connection
 NETBOX_URL = "https://netbox.example.com"
 NETBOX_TOKEN = "provide-your-token"
 NETBOX_STATUS: bool = False
 NETBOX_SESSION = None  # Global session variable
 
-'''
-try:
-    from pynetbox_api.env import NETBOX_URL, NETBOX_TOKEN
-except ImportError as error:
-    print('Error to Import environment variables.')
-    
-def _establish_from_env():
-    print('Trying to establish connection to NetBox using env.py file...')
+def get_netbox_endpoint() -> NetBoxEndpoint | None:
     try:
-        if not NETBOX_URL:
-            print('NETBOX_URL environment variable not found.',)
+        # Get the database session
+        database_session = next(get_session())
         
-        if not NETBOX_TOKEN:
-            print('NETBOX_TOKEN environment variable not found.',)
+        # Get the first NetBox endpoint from the database
+        netbox_endpoint = database_session.exec(select(NetBoxEndpoint)).first()
+        
+        # Return the NetBox endpoint
+        return netbox_endpoint
 
-        if NETBOX_URL and NETBOX_TOKEN:
-            urllib3.disable_warnings()
+    except OperationalError as error:
+        print('Table does not exist, creating it...')
+        create_db_and_tables()
+        
+        # Try again
+        return get_netbox_endpoint()
+    
 
-            session = requests.Session()
-            session.verify = False
-            
-            try:
-                nb = pynetbox.api(
-                    NETBOX_URL,
-                    token=NETBOX_TOKEN,
-                )
-                nb.http_session = session
-                
-                return nb
-            except Exception as error:
-                raise FastAPIException(
-                    message=f'Error to connect to Netbox ({NETBOX_URL})',
-                    python_exception=str(error)
-                )
-    except FastAPIException as error:
-        print(f'Error to load environment variables.\n{error}')
-    except Exception as error:
-        print(f'Unexpected error. {error}')
-'''
-
-def _establish_from_sql() -> pynetbox.api | None:
+def establish_netbox_session(netbox_endpoint: NetBoxEndpoint) -> pynetbox.api | None:
     global NETBOX_SESSION, NETBOX_STATUS
+    
+    if not netbox_endpoint:
+        return None
     
     # If we already have a working session, return it
     if NETBOX_SESSION and NETBOX_STATUS:
         return NETBOX_SESSION
         
-    print('Trying to establish connection to NetBox using SQL database...')
-    
-    from sqlmodel import select
-    from pynetbox_api.database import NetBoxEndpoint, get_session
-    from sqlalchemy.exc import OperationalError
-    
-    database_session = next(get_session())
-    try:
-        netbox_endpoint = database_session.exec(select(NetBoxEndpoint)).first()
-    except OperationalError as error:
-        # If table does not exist, create it.
-        print('Table does not exist, creating it...')
-        from pynetbox_api.database import create_db_and_tables
-        create_db_and_tables()
-        netbox_endpoint = database_session.exec(select(NetBoxEndpoint)).first()
-    
-    if netbox_endpoint:
-        print(f'Found NetBox endpoint: {netbox_endpoint.name}')
-        urllib3.disable_warnings()
 
-        # Try different connection strategies
-        connection_strategies = [
-            # Strategy 1: Use configured URL with SSL verification
-            {
-                'url': netbox_endpoint.url,
-                'verify': netbox_endpoint.verify_ssl,
-                'description': 'configured URL with SSL verification'
-            },
-            # Strategy 2: Use configured URL without SSL verification
-            {
-                'url': netbox_endpoint.url,
-                'verify': False,
-                'description': 'configured URL without SSL verification'
-            },
-            # Strategy 3: Try HTTP if HTTPS fails
-            {
-                'url': f"http://{netbox_endpoint.ip_address.split('/')[0]}:{netbox_endpoint.port}",
-                'verify': False,
-                'description': 'HTTP fallback'
-            },
-            # Strategy 4: Try localhost
-            {
-                'url': f"http://localhost:{netbox_endpoint.port}",
-                'verify': False,
-                'description': 'localhost fallback'
-            }
-        ]
+    print(f'Found NetBox endpoint: {netbox_endpoint.name}')
+    urllib3.disable_warnings()
 
-        for strategy in connection_strategies:
-            try:
-                print(f'Attempting connection using {strategy["description"]}...')
-                session = requests.Session()
-                session.verify = strategy['verify']
-                
-                NETBOX_SESSION = pynetbox.api(
-                    strategy['url'],
-                    token=netbox_endpoint.token,
-                )
-                NETBOX_SESSION.http_session = session
-                
-                # Test the connection
-                print('Testing connection with status check...')
-                NETBOX_SESSION.status()
-                print('Status check successful')
-                NETBOX_STATUS = True
-                return NETBOX_SESSION
-                
-            except Exception as error:
-                print(f'Connection attempt failed: {str(error)}')
-                NETBOX_STATUS = False
-                NETBOX_SESSION = None
-                continue
-        
-        print('All connection attempts failed')
-        return None
+    # Try different connection strategies
+    connection_strategies = [
+        # Strategy 1: Use configured URL with SSL verification
+        {
+            'url': netbox_endpoint.url,
+            'verify': netbox_endpoint.verify_ssl,
+            'description': 'configured URL with SSL verification'
+        },
+        # Strategy 2: Use configured URL without SSL verification
+        {
+            'url': netbox_endpoint.url,
+            'verify': False,
+            'description': 'configured URL without SSL verification'
+        },
+        # Strategy 3: Try HTTP if HTTPS fails
+        {
+            'url': f"http://{netbox_endpoint.ip_address.split('/')[0]}:{netbox_endpoint.port}",
+            'verify': False,
+            'description': 'HTTP fallback'
+        },
+        # Strategy 4: Try localhost
+        {
+            'url': f"http://localhost:{netbox_endpoint.port}",
+            'verify': False,
+            'description': 'localhost fallback'
+        }
+    ]
+
+    for strategy in connection_strategies:
+        try:
+            print(f'🔄 Attempting connection using {strategy["description"]}...')
+            session = requests.Session()
+            session.verify = strategy['verify']
+            
+            NETBOX_SESSION = pynetbox.api(
+                strategy['url'],
+                token=netbox_endpoint.token,
+            )
+            NETBOX_SESSION.http_session = session
+            
+            # Test the connection
+            print('🔍 Testing connection with status check...')
+            NETBOX_SESSION.status()
+            print('✅ Status check successful')
+            NETBOX_STATUS = True
+            return NETBOX_SESSION
+            
+        except Exception as error:
+            print(f"❌ Connection attempt with {strategy['url']} failed: {str(error)}")
+            NETBOX_STATUS = False
+            NETBOX_SESSION = None
+            continue
     
-    else:
-        print('NetBox Endpoint not found in the database.')
-        NETBOX_STATUS = False
-        NETBOX_SESSION = None
-        return None
+    print('🚫 All connection attempts failed')
+    return None
+
     
-RawNetBoxSession = _establish_from_sql
+RawNetBoxSession = establish_netbox_session(netbox_endpoint=get_netbox_endpoint())
 
 class NetBoxBase:
     """
@@ -169,7 +138,7 @@ class NetBoxBase:
     """
     def __new__(
         cls,
-        nb: pynetbox.api = _establish_from_sql(),
+        nb: pynetbox.api,
         bootstrap_placeholder: bool = False,
         is_bootstrap: bool = False,
         cache: bool = True,
@@ -247,7 +216,7 @@ class NetBoxBase:
         
     def __init__(
         self,
-        nb: pynetbox.api = _establish_from_sql(),
+        nb: pynetbox.api,
         bootstrap_placeholder: Annotated[
             bool,
             Doc(

@@ -1,4 +1,6 @@
 import pynetbox
+from pynetbox_api.session import establish_netbox_session
+from pynetbox_api.database import NetBoxEndpoint
 
 import requests
 from bs4 import BeautifulSoup
@@ -29,32 +31,6 @@ example_status_response = {
     'python-version': '3.12.9', 
     'rq-workers-running': 1
 }
-
-def establish_pynetbox_session(
-    url: str = DEMO_URL,
-    username: str = DEMO_USER_NAME,
-    password: str = DEMO_PASSWORD,
-    token: str = DEMO_TOKEN,
-    use_token: bool = True,
-) -> pynetbox.api:
-    """Creates and returns a pynetbox session object for interacting with the NetBox API.
-
-    Args:
-        url (str): The NetBox instance URL (defaults to DEMO_URL)
-        username (str): Username for authentication (defaults to DEMO_USER_NAME)
-        password (str): Password for authentication (defaults to DEMO_PASSWORD)
-        token (str): API token for authentication (defaults to DEMO_TOKEN)
-        use_token (bool): Whether to use token authentication (defaults to True)
-
-    Returns:
-        pynetbox.api: A configured pynetbox API session object
-    """
-    
-    return pynetbox.api(
-        url,
-        token=token,
-    )
-
 
 
 def login_to_demo_site() -> requests.Session | None:
@@ -113,8 +89,15 @@ def create_test_user() -> dict | None:
     else:
         create_test_user()
 
+netbox_endpoint = NetBoxEndpoint(
+    name='Demo NetBox',
+    ip_address='159.65.38.255',
+    domain='demo.netbox.dev',
+    port=443,
+    token='4aba5565210cea968a3c47e49c39b0fed8602742',
+)
 
-def test_session(nb: pynetbox.api = establish_pynetbox_session()) -> dict | None:
+def test_session(nb: pynetbox.api) -> dict | None:
     """Tests the NetBox API session by attempting to retrieve the system status.
 
     This function implements a robust error handling mechanism:
@@ -131,6 +114,9 @@ def test_session(nb: pynetbox.api = establish_pynetbox_session()) -> dict | None
     Returns:
         dict | None: System status information if successful, None otherwise
     """
+    if not nb:
+        return None
+    
     try:
         return nb.status()
     except pynetbox.core.query.RequestError as e:
@@ -162,6 +148,9 @@ def test_session(nb: pynetbox.api = establish_pynetbox_session()) -> dict | None
                 print(f'Error to get status: {e}')
                 raise e
     
-print(test_session())
+demo_netbox_session = establish_netbox_session(netbox_endpoint)
+test_demo_netbox_session = test_session(demo_netbox_session)
+
+print(test_demo_netbox_session)
 
 

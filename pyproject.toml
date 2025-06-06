@@ -6,9 +6,11 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "aiohttp>=3.11.11",
+    "bs4>=0.0.2",
     "fastapi[standard]",
     "pydantic>=2.10.6",
     "pynetbox>=7.4.1",
+    "pytest>=8.3.5",
     "python-dotenv>=1.0.1",
     "requests>=2.32.3",
     "sqlmodel>=0.0.22",
