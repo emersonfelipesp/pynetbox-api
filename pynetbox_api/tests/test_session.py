@@ -6,7 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 
 DEMO_URL: str = 'https://demo.netbox.dev/'
-DEMO_USER_NAME: str = 'pynetbox_api'
+DEMO_USER_NAME: str = 'pynetbox_api4'
 DEMO_PASSWORD: str = '@T3st0nly'
 DEMO_TOKEN: str = '4aba5565210cea968a3c47e49c39b0fed8602742'
 
@@ -33,7 +33,9 @@ example_status_response = {
 }
 
 
-def login_to_demo_site() -> requests.Session | None:
+# This function, `login_to_demo_site`, attempts to log into the NetBox demo site using predefined credentials.
+# It can retry the login process once if the initial attempt fails.
+def login_to_demo(mode: str = 'login', already_retried: bool = False) -> requests.Session | None:
     """Performs a web-based login to the NetBox demo site using the demo credentials.
 
     This function handles CSRF token retrieval and session management for web-based authentication.
@@ -41,34 +43,72 @@ def login_to_demo_site() -> requests.Session | None:
     Returns:
         requests.Session | None: A requests session object if login is successful, None otherwise
     """
-    login_url = 'https://demo.netbox.dev/plugins/demo/login/'
+    
+    login_url = ''
+    
+    if mode == 'login':
+        login_url = 'https://demo.netbox.dev/login/'
+    elif mode == 'create_user':
+        login_url = 'https://demo.netbox.dev/plugins/demo/login/'
+    else:
+        raise ValueError(f'Invalid mode: {mode}')
+    
+    print(login_url)
+    # Create a new session object to manage cookies and headers.
     session = requests.Session()
 
-    # Get the login page to retrieve the CSRF token
+    # Send a GET request to the login page to retrieve the HTML content.
     response = session.get(login_url)
+    
+    
+    # Parse the HTML content using BeautifulSoup to extract the CSRF token.
     soup = BeautifulSoup(response.text, 'html.parser')
     csrf_token = soup.find('input', {'name': 'csrfmiddlewaretoken'}).get('value')
 
-    # Prepare login data
+    # Prepare the login data including the username, password, and CSRF token.
     login_data = {
         'username': DEMO_USER_NAME,
         'password': DEMO_PASSWORD,
         'csrfmiddlewaretoken': csrf_token
     }
 
-    # Perform login
+    # Set the headers for the POST request, including the Referer to the login URL.
     headers = {
         'Referer': login_url
     }
+    
+    # Send a POST request to the login URL with the login data and headers to attempt login.
     login_response = session.post(login_url, data=login_data, headers=headers)
+    
+    # If the login failed due to a incorrect username or password, try to create a new user.
+    if 'Please enter a correct username and password' in login_response.text:
+        login_session = login_to_demo(mode='create_user')
+        if login_session:
+            return login_session
+        else:
+            return None
+        
     print(login_response.text)
-    # Check if login was successful
-    if login_response.ok and 'Log out' in login_response.text:
+    # Check if the login failed due to a duplicate user.
+    if 'duplicate key value' in login_response.text or 'already exists' in login_response.text:
+        print("Login failed. User already exists.")
+        return None
+    
+    # Check if the login was successful by verifying the response status
+    if login_response.ok:
+        # If successful, print a success message and return the session object.
         print("Login successful")
         return session
     else:
+        # If login failed, print a failure message.
         print("Login failed")
-        return None
+        # If retry is allowed, return None to indicate failure.
+        if already_retried:
+            return None
+        else:
+            print("Retrying login...")
+            # Otherwise, retry the login process once by calling the function recursively with retry set to True.
+            return login_to_demo_site(already_retried=True)
 
 
 def create_test_user() -> dict | None:
@@ -148,9 +188,10 @@ def test_session(nb: pynetbox.api) -> dict | None:
                 print(f'Error to get status: {e}')
                 raise e
     
-demo_netbox_session = establish_netbox_session(netbox_endpoint)
-test_demo_netbox_session = test_session(demo_netbox_session)
+login_to_demo()
+#demo_netbox_session = establish_netbox_session(netbox_endpoint)
+#test_demo_netbox_session = test_session(demo_netbox_session)
 
-print(test_demo_netbox_session)
+#print(test_demo_netbox_session)
 
 
