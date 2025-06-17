@@ -138,7 +138,7 @@ class NetBoxBase:
     """
     def __new__(
         cls,
-        nb: pynetbox.api,
+        nb: pynetbox.api = None,
         bootstrap_placeholder: bool = False,
         is_bootstrap: bool = False,
         cache: bool = True,
