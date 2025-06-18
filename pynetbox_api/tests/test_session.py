@@ -221,9 +221,19 @@ def test_login_to_demo():
 
 def test_establish_demo_session():
     pynetbox_session = TestNetBoxBase.nb
+    
+    assert pynetbox_session is not None
     assert pynetbox_session.version is not None
     assert pynetbox_session.dcim.devices.count() is not None and pynetbox_session.dcim.devices.count() > 0
     
     assert isinstance(pynetbox_session, pynetbox.api)
-    assert pynetbox_session is not None
+    
+    pynetbox_status = pynetbox_session.status()
+    assert pynetbox_status is not None
+    assert pynetbox_status.get('django-version') is not None
+    assert pynetbox_status.get('netbox-version') is not None
+    assert pynetbox_status.get('netbox-full-version') is not None
+    
+    
+    
 
