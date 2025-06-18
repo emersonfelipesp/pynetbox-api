@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 DEMO_URL: str = 'https://demo.netbox.dev/'
 DEMO_USER_NAME: str = 'pynetbox_api'
 DEMO_PASSWORD: str = '@T3st0nly'
+LOGIN_SUCCESSFUL: bool = False
 
 demo_config = {
     'url': DEMO_URL,
@@ -42,7 +43,7 @@ example_status_response = {
 
 # This function, `login_to_demo_site`, attempts to log into the NetBox demo site using predefined credentials.
 # It can retry the login process once if the initial attempt fails.
-def login_to_demo(mode: str = 'login', already_retried: bool = False) -> requests.Session | None:
+def login_to_demo(mode: str = 'login', already_retried: bool = False) -> bool:
     """Performs a web-based login to the NetBox demo site using the demo credentials.
 
     This function handles CSRF token retrieval and session management for web-based authentication.
@@ -50,6 +51,9 @@ def login_to_demo(mode: str = 'login', already_retried: bool = False) -> request
     Returns:
         requests.Session | None: A requests session object if login is successful, None otherwise
     """
+    global LOGIN_SUCCESSFUL
+    if LOGIN_SUCCESSFUL:
+        return True
     
     login_url = ''
     
@@ -98,23 +102,26 @@ def login_to_demo(mode: str = 'login', already_retried: bool = False) -> request
     # Check if the login failed due to a duplicate user.
     if 'duplicate key value' in login_response.text or 'already exists' in login_response.text:
         print("Login failed. User already exists.")
-        return None
+        return False
     
     # Check if the login was successful by verifying the response status
     if login_response.ok:
         # If successful, print a success message and return the session object.
         print("Login successful")
-        return session
+        LOGIN_SUCCESSFUL = True
+        return True
     else:
         # If login failed, print a failure message.
         print("Login failed")
         # If retry is allowed, return None to indicate failure.
         if already_retried:
-            return None
+            return False
         else:
             print("Retrying login...")
             # Otherwise, retry the login process once by calling the function recursively with retry set to True.
             return login_to_demo(already_retried=True)
+    
+    return False
 
 
 
@@ -126,6 +133,7 @@ netbox_endpoint = NetBoxEndpoint(
     token='4aba5565210cea968a3c47e49c39b0fed8602742',
 )
 
+'''
 def test_session(nb: pynetbox.api) -> dict | None:
     """Tests the NetBox API session by attempting to retrieve the system status.
 
@@ -176,10 +184,11 @@ def test_session(nb: pynetbox.api) -> dict | None:
             except Exception as e:
                 print(f'Error to get status: {e}')
                 raise e
+'''
 
 
 def establish_demo_session() -> pynetbox.api | None:
-    if login_to_demo() is None:
+    if login_to_demo() is False:
         raise Exception('Login failed')
     
     # If the token is not set, create a new token
@@ -205,4 +214,16 @@ class TestNetBoxBase(NetBoxBase):
     the main NetBoxBase class.
     """
     nb: pynetbox.api = establish_demo_session()
+
+def test_login_to_demo():
+    assert login_to_demo() is True
+
+
+def test_establish_demo_session():
+    pynetbox_session = TestNetBoxBase.nb
+    assert pynetbox_session.version is not None
+    assert pynetbox_session.dcim.devices.count() is not None and pynetbox_session.dcim.devices.count() > 0
+    
+    assert isinstance(pynetbox_session, pynetbox.api)
+    assert pynetbox_session is not None
 

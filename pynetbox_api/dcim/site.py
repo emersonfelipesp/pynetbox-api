@@ -72,4 +72,4 @@ class Site(NetBoxBase):
     
     # API
     prefix = '/site'
-    api_router = APIRouter(tags=['DCIM / '])
+    api_router = APIRouter(tags=['DCIM / Site'])
