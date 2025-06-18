@@ -136,6 +136,9 @@ class NetBoxBase:
         use_placeholder: Define is placeholder object will be used to create new objects, filling missing fields.
         bootstrap_placeholder: Define if placeholder object will be created during class instantiation or if no object is provided.
     """
+    
+    
+    """ THIS WAS USED TO RETURN JSON API-RESPONSE AS OBJECT INSTANCE
     def __new__(
         cls,
         nb: pynetbox.api = None,
@@ -146,24 +149,21 @@ class NetBoxBase:
         **kwargs
     ):
         if not nb:
-            print('NetBox API connection not found.')
-            NETBOX_STATUS = False
-        
+            print('No custom NetBox API connection provided.')
+        else:
+            # Set the custom NetBox API connection
+            instance.nb = nb
+            
         # Create a new instance of the class
         instance = super().__new__(cls)
         
-        # Default values
-        instance.nb = nb
         instance.id = 0
         instance.result = {}
-    
-        if nb is None:
-            print('Not able to establish connection to NetBox API.')
-            return instance.result
         
         try:
+            print(instance.nb)
             instance.app_name = f'{instance.app}.{instance.name}'
-            instance.object = getattr(getattr(nb, instance.app), instance.name)
+            instance.object = getattr(getattr(instance.nb, instance.app), instance.name)
         except Exception as error:
             raise FastAPIException(
                 message=f'Error to get object {instance.app}.{instance.name}',
@@ -213,10 +213,11 @@ class NetBoxBase:
         
         # Return the instance as is if not being created with arguments
         return instance
-        
+    """
+    
     def __init__(
         self,
-        nb: pynetbox.api,
+        nb: pynetbox.api | None = None,
         bootstrap_placeholder: Annotated[
             bool,
             Doc(
@@ -240,7 +241,7 @@ class NetBoxBase:
         **kwargs
     ):
         # Check if the NetBox API is reachable
-        self.nb = nb
+        if nb: self.nb = nb
         self.id = 0
         self.app_name = f'{self.app}.{self.name}'
         self.kwargs = kwargs
@@ -248,7 +249,10 @@ class NetBoxBase:
         if not self.check_status(): return
         
         try:
-            self.object = getattr(getattr(nb, self.app), self.name)
+            if self.nb:
+                self.object = getattr(getattr(self.nb, self.app), self.name)
+            else:
+                return None
         except Exception as error:
             raise FastAPIException(
                 message=f'Error to get object {self.app}.{self.name}',
@@ -264,6 +268,7 @@ class NetBoxBase:
 
         if self.bootstrap_placeholder and self.placeholder_dict:
             self.result = self.post(self.placeholder_dict, cache=True, is_bootstrap=True)
+            self.json = self.result
             self.id = None
             try:
                 self.id = self.result.get('id', None)
@@ -271,6 +276,7 @@ class NetBoxBase:
                 self.id = getattr(self.result, 'id', None)
 
     def check_status(self) -> bool:
+        print(self.nb)
         global NETBOX_STATUS, NETBOX_SESSION
         base_message: str = 'Unexpected error to connect to NetBox API using check_status() method.'
         try:
@@ -328,6 +334,8 @@ class NetBoxBase:
     placeholder_dict: dict = {}
     json: dict = {}
     
+    nb: pynetbox.api = None
+    
     def _generate_hash(self, data):
         try:
             json_string = json.dumps(data, sort_keys=True)  # Convert dictionary to JSON string
@@ -344,17 +352,10 @@ class NetBoxBase:
         return {self._generate_hash(json): json}
     
     def _bootstrap_placeholder(self) -> dict:
-        # Parse Pydantic Schema to JSON and construct the JSON object to be used as payload.
-        bootstrap: dict = {}
+        # Get all values from the schema instance, excluding unset values
         try:
-            json_schema = self.schema_in.model_json_schema()
-            for key, value in json_schema['properties'].items():
-                default_value = value.get('default', None)
-                if default_value:
-                    bootstrap[key] = value.get('default')
-            
-            return bootstrap
-        
+            print('self.schema_in().model_dump(exclude_none=True):', self.schema_in().model_dump(exclude_none=True))
+            return self.schema_in().model_dump(exclude_none=True)
         except Exception as error:
             raise FastAPIException(
                 message=f'Error to create placeholder object {self.app}.{self.name}',

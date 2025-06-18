@@ -1,14 +1,21 @@
 import pynetbox
 from pynetbox_api.session import establish_netbox_session
 from pynetbox_api.database import NetBoxEndpoint
+from pynetbox_api.session import NetBoxBase
 
 import requests
 from bs4 import BeautifulSoup
 
 DEMO_URL: str = 'https://demo.netbox.dev/'
-DEMO_USER_NAME: str = 'pynetbox_api4'
+DEMO_USER_NAME: str = 'pynetbox_api'
 DEMO_PASSWORD: str = '@T3st0nly'
-DEMO_TOKEN: str = '4aba5565210cea968a3c47e49c39b0fed8602742'
+
+demo_config = {
+    'url': DEMO_URL,
+    'username': DEMO_USER_NAME,
+    'password': DEMO_PASSWORD,
+    'token': None,
+}
 
 example_status_response = {
     'django-version': '5.2.1', 
@@ -53,13 +60,12 @@ def login_to_demo(mode: str = 'login', already_retried: bool = False) -> request
     else:
         raise ValueError(f'Invalid mode: {mode}')
     
-    print(login_url)
+    #print(login_url)
     # Create a new session object to manage cookies and headers.
     session = requests.Session()
 
     # Send a GET request to the login page to retrieve the HTML content.
     response = session.get(login_url)
-    
     
     # Parse the HTML content using BeautifulSoup to extract the CSRF token.
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -88,7 +94,7 @@ def login_to_demo(mode: str = 'login', already_retried: bool = False) -> request
         else:
             return None
         
-    print(login_response.text)
+    #print(login_response.text)
     # Check if the login failed due to a duplicate user.
     if 'duplicate key value' in login_response.text or 'already exists' in login_response.text:
         print("Login failed. User already exists.")
@@ -108,26 +114,9 @@ def login_to_demo(mode: str = 'login', already_retried: bool = False) -> request
         else:
             print("Retrying login...")
             # Otherwise, retry the login process once by calling the function recursively with retry set to True.
-            return login_to_demo_site(already_retried=True)
+            return login_to_demo(already_retried=True)
 
 
-def create_test_user() -> dict | None:
-    """Creates a test user on the NetBox demo instance.
-    
-    This function requires successful login to the demo site first.
-    https://demo.netbox.dev/plugins/demo/login/
-
-    Returns:
-        dict | None: User information if creation is successful, None otherwise
-
-    Raises:
-        Exception: If login fails
-    """
-    login_to_demo_site()
-    if login_to_demo_site() is None:
-        raise Exception('Login failed')
-    else:
-        create_test_user()
 
 netbox_endpoint = NetBoxEndpoint(
     name='Demo NetBox',
@@ -187,11 +176,33 @@ def test_session(nb: pynetbox.api) -> dict | None:
             except Exception as e:
                 print(f'Error to get status: {e}')
                 raise e
+
+
+def establish_demo_session() -> pynetbox.api | None:
+    if login_to_demo() is None:
+        raise Exception('Login failed')
     
-login_to_demo()
-#demo_netbox_session = establish_netbox_session(netbox_endpoint)
-#test_demo_netbox_session = test_session(demo_netbox_session)
+    # If the token is not set, create a new token
+    if demo_config.get('token') is None:
+        # pynetbox API object (session)
+        nb = pynetbox.api(demo_config.get('url'))
+    
+        demo_config['token'] = nb.create_token(
+            demo_config['username'],
+            demo_config['password']
+        )
+        
+    else:
+        nb = pynetbox.api(demo_config.get('url'), token=demo_config.get('token'))
+        
+    return nb
 
-#print(test_demo_netbox_session)
 
+class TestNetBoxBase(NetBoxBase):
+    """
+    Test-specific version of NetBoxBase that uses a separate NetBox session.
+    This allows test code to use a different NetBox connection without affecting
+    the main NetBoxBase class.
+    """
+    nb: pynetbox.api = establish_demo_session()
 
