@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pynetbox_api.session import NetBoxBase
 
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel, RootModel, Field
 from typing import List
 
 from pynetbox_api.extras.tag import Tags
@@ -37,7 +37,7 @@ class DeviceRole(NetBoxBase):
         vm_role: bool = True
         config_template: str | None = None
         description: str = 'Placeholder object for ease data ingestion'
-        tags: List[int]
+        tags: List[int] = Field(default_factory=lambda: [Tags(bootstrap_placeholder=True).id])
         
     SchemaList = RootModel[List[Schema]]
     

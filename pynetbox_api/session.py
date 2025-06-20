@@ -1,4 +1,5 @@
 import requests
+from sqlalchemy.util import bool_or_str
 import urllib3
 import pynetbox
 
@@ -138,7 +139,7 @@ class NetBoxBase:
     """
     
     
-    """ THIS WAS USED TO RETURN JSON API-RESPONSE AS OBJECT INSTANCE
+    """THIS WAS USED TO RETURN JSON API-RESPONSE AS OBJECT INSTANCE
     def __new__(
         cls,
         nb: pynetbox.api = None,
@@ -232,7 +233,7 @@ class NetBoxBase:
             bool,
             Doc(
                 """
-                Define is placeholder object will be used to create new objects, filling missing fields.
+                Define if placeholder object will be used to create new objects, filling missing fields.
                 It will use the pydantic schema to create the placeholder object.
                 The schema is defined in the class as 'schema_in'.
                 """
@@ -240,7 +241,7 @@ class NetBoxBase:
         ] = True,
         **kwargs
     ):
-        # Check if the NetBox API is reachable
+        print('kwargs: ', kwargs)
         if nb: self.nb = nb
         self.id = 0
         self.app_name = f'{self.app}.{self.name}'
@@ -274,6 +275,59 @@ class NetBoxBase:
                 self.id = self.result.get('id', None)
             except:
                 self.id = getattr(self.result, 'id', None)
+                
+        # Check if the instance is being created with arguments
+        if kwargs and not bootstrap_placeholder:
+            # Return post method result as the class instance
+            result: dict = self.post(
+                json=kwargs,
+                cache=True,
+                merge_with_placeholder=True
+            )
+
+            self.id = result.get('id', None) if type(result) == dict else None
+            self.id = getattr(result, 'id', None) if type(result) != dict else None
+            
+            print(result)
+            self.result = result if type(result) == dict else result.dict()
+            self.id = self.result.get('id', None) if type(self.result) == dict else None
+
+
+    def __dict__(self) -> dict:
+        """
+        Return the result attribute when dict() is called on the instance.
+        This allows dict(NetBoxBase()) to return the result attribute.
+        """
+        return getattr(self, 'result', {})
+
+
+    def __iter__(self):
+        """
+        Make the object iterable so dict() can work properly.
+        This iterates over the result attribute if it's a dictionary.
+        """
+        result = getattr(self, 'result', {})
+        if isinstance(result, dict):
+            return iter(result.items())
+        return iter({}.items())
+
+
+    def __getitem__(self, key):
+        """
+        Allow dictionary-style access to the result attribute.
+        """
+        result = getattr(self, 'result', {})
+        if isinstance(result, dict):
+            return result[key]
+        raise KeyError(key)
+
+
+    def dict(self) -> dict:
+        """
+        Explicit method to get the result as a dictionary.
+        """
+        return getattr(self, 'result', {})
+
 
     def check_status(self) -> bool:
         print(self.nb)
@@ -333,6 +387,7 @@ class NetBoxBase:
     # Placeholder object
     placeholder_dict: dict = {}
     json: dict = {}
+    result: dict = {}
     
     nb: pynetbox.api = None
     
@@ -354,8 +409,9 @@ class NetBoxBase:
     def _bootstrap_placeholder(self) -> dict:
         # Get all values from the schema instance, excluding unset values
         try:
-            print('self.schema_in().model_dump(exclude_none=True):', self.schema_in().model_dump(exclude_none=True))
-            return self.schema_in().model_dump(exclude_none=True)
+            bootstrap_default_values = self.schema_in().model_dump(exclude_none=True)
+            print('bootstrap_default_values: ', bootstrap_default_values)
+            return bootstrap_default_values
         except Exception as error:
             raise FastAPIException(
                 message=f'Error to create placeholder object {self.app}.{self.name}',
@@ -481,9 +537,7 @@ class NetBoxBase:
                     cache_object = global_cache.get(f'{self.app_name}.{id}') if cache else None
                     if cache_object:
                         return cache_object
-                    else:
-                        get_object = self.object.get(id)
-                
+
 
                 get_object = self.object.get(id)
                 
@@ -493,10 +547,16 @@ class NetBoxBase:
                             key=f'{self.app_name}.{id}',
                             value=get_object
                         )
-                        
-                    return self.schema(**dict(get_object)).model_dump()
                 
-                return get_object
+                
+                  
+                json_object = self.schema(**dict(get_object)).model_dump() if self.schema else get_object
+                self.result = json_object
+                self.id = json_object.get('id', None)
+                self.json = json_object
+                
+                return json_object
+
 
 
             if kwargs:
@@ -514,6 +574,11 @@ class NetBoxBase:
                                     key=f'{self.app_name}.bootstrap',
                                     value=get_object
                                 )
+                                
+                            self.result = get_object
+                            self.id = get_object.get('id', None)
+                            self.json = get_object
+                            
                             return get_object
                         
 
@@ -528,6 +593,9 @@ class NetBoxBase:
                             cache_object = global_cache.get(f'{self.app_name}.{hashed_key}') if cache else None
                             if cache_object:
                                 #print('cache_object found')
+                                self.result = cache_object
+                                self.id = cache_object.get('id', None)
+                                self.json = cache_object
                                 return cache_object
                             
                             get_object = self.schema(**dict(self.object.get(**kwargs))).model_dump()
@@ -537,7 +605,10 @@ class NetBoxBase:
                                     key=f'{self.app_name}.{hashed_key}',
                                     value=get_object
                                 )
-                        
+                            
+                            self.result = get_object
+                            self.id = get_object.get('id', None)
+                            self.json = get_object
                             return get_object
                         except FastAPIException:
                             raise
@@ -550,12 +621,20 @@ class NetBoxBase:
                     
                     # If not using cache, it will get the object from the NetBox API
                     # Receives dict, parse to schema and return as dict again.
-                    return self.schema(**dict(self.object.get(**kwargs))).model_dump()
+                    get_object = self.schema(**dict(self.object.get(**kwargs))).model_dump()
+                    self.result = get_object
+                    self.id = get_object.get('id', None)
+                    self.json = get_object
+                    return get_object
 
                 except ValueError:
                     try:
                         for first_object in self.object.filter(**kwargs):
-                            return self.schema(**dict(first_object)).model_dump()
+                            get_object = self.schema(**dict(first_object)).model_dump()
+                            self.result = get_object
+                            self.id = get_object.get('id', None)
+                            self.json = get_object
+                            return get_object
                         
                     except pynetbox.core.query.RequestError as error:
                         msg: str = f'Error to get object {self.app}.{self.name}\nError: {str(error)}\nPayload provided: {kwargs}'
@@ -678,42 +757,62 @@ class NetBoxBase:
                 python_exception=str(error)
             )
     
-    def delete(self, id: int):
+    def delete(self):
         try:
-            search_object = self.object.get(id)
+            search_object = self.object.get(self.id)
             if search_object:
                 if search_object.delete():
+                    self.id = None
+                    self.result = {}
+                    return True
+                    
+                    '''
                     raise FastAPIException(
-                        message=f'Object {self.app}.{self.name} with ID {id} deleted successfully.',
+                        message=f'Object {self.app}.{self.name} with ID {self.id} deleted successfully.',
                         status_code=200
                     )
+                    '''
 
+                return False
+                '''
                 raise FastAPIException(
-                    message=f'Object {self.app}.{self.name} with ID {id} removal failed.',
+                    message=f'Object {self.app}.{self.name} with ID {self.id} removal failed.',
                     status_code=404
                 )
+                '''
             else:
+                return False
+                '''
                 raise FastAPIException(
-                    message=f'Object {self.app}.{self.name} with ID {id} not found.',
+                    message=f'Object {self.app}.{self.name} with ID {self.id} not found.',
                     status_code=404
                 )
+                '''
                 
         except FastAPIException:
-            raise
+            return False
+            # raise
 
         except pynetbox.core.query.RequestError as error:
+            return False
+            '''
             msg: str = f'Error to delete object {self.app}.{self.name}\nError: {str(error)}\nPayload provided: {id}'
             raise FastAPIException(
                 message=msg,
                 python_exception=str(error)
             )
+            '''
 
         except Exception as error:
+            return False
+            
+            '''
             msg: str = f'Error to delete object {self.app}.{self.name} with ID: {id}'
             raise FastAPIException(
                 message=msg,
                 python_exception=str(error)
             )
+            '''
     
     def all(self):
         try:

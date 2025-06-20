@@ -233,7 +233,7 @@ def test_establish_demo_session():
     assert pynetbox_status.get('django-version') is not None
     assert pynetbox_status.get('netbox-version') is not None
     assert pynetbox_status.get('netbox-full-version') is not None
-    
+
     
     
 

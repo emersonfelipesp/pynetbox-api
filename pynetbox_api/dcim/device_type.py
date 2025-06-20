@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pynetbox_api.session import NetBoxBase
 
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel, RootModel, Field
 from typing import List, Optional, Literal
 
 from pynetbox_api.dcim.manufacturer import Manufacturer
@@ -54,18 +54,18 @@ class DeviceType(NetBoxBase):
 
 
     class SchemaIn(BaseModel):
-        manufacturer: int = Manufacturer(bootstrap_placeholder=True).get('id', 0)
+        manufacturer: int = Field(default_factory=lambda: Manufacturer(bootstrap_placeholder=True).id)
         model: str = 'Device Type Placeholder'
         slug: str = 'device-type-placeholder'
         default_platform: str | None = None
         description: str = 'Placeholder object for ease data ingestion'
-        tags: List[int] = [Tags(bootstrap_placeholder=True).get('id', 0)]
+        tags: List[int] = Field(default_factory=lambda: [Tags(bootstrap_placeholder=True).id])
         u_height: float = 1
         part_number: str | None = None
-        subdevice_role: str = Optional[Literal['parent', 'child', None]]
+        subdevice_role: Optional[Literal['parent', 'child', None]] = None
         airflow: str | None = None
         weight: str | None = None
-        weight_unit: Optional[Literal['kg', 'g', 'lb', 'oz', None]]
+        weight_unit: Optional[Literal['kg', 'g', 'lb', 'oz', None]] = None
         front_image: str | None = None
         rear_image: str | None = None
         comments: str | None = None

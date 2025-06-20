@@ -9,6 +9,8 @@ from pynetbox_api.dcim.device_type import DeviceType
 from pynetbox_api.extras.tag import Tags
 from pynetbox_api.virtualization.cluster import Cluster
 
+from pydantic import Field
+
 class Device(NetBoxBase):
     class BasicSchema(BaseModel):
         id: int | None = None
@@ -64,14 +66,15 @@ class Device(NetBoxBase):
 
     class SchemaIn(BaseModel):
         name: str = 'Device Placeholder'
-        role: int = DeviceRole(bootstrap_placeholder=True).get('id', 0)
+        role: int = Field(default_factory=lambda: DeviceRole(bootstrap_placeholder=True).id)
         description: str = 'Placeholder object for ease data ingestion'
-        tags: List[int] = [Tags(bootstrap_placeholder=True).get('id', 0)]
-        device_type: int = DeviceType(bootstrap_placeholder=True).get('id', 0)
+        #tags: List[int] = [Tags(bootstrap_placeholder=True).get('id', 0)]
+        tags: List[int] = Field(default_factory=lambda: [Tags(bootstrap_placeholder=True).id])
+        device_type: int = Field(default_factory=lambda: DeviceType(bootstrap_placeholder=True).id)
         airflow: str | None = None
         serial: str | None = None
         asset_tag: str | None = None
-        site: int = Site(bootstrap_placeholder=True).get('id', 0)
+        site: int = Field(default_factory=lambda: Site(bootstrap_placeholder=True).id)
         location: str | None = None
         position: int | None = None
         rack: str | None = None
@@ -79,13 +82,12 @@ class Device(NetBoxBase):
         latitude: float | None = None
         longitude: float | None = None
         status: str = 'active'
-        platform: str
+        platform: str | None = None
         config_template: str | None = None
         cluster: int | None = None
         tenant_group: str | None = None
         tenant: str | None = None
         virtual_chassis: str | None = None
-        position: int | None = None
         priority: int | None = None
         custom_fields: dict[str, str | None] = {}
 
