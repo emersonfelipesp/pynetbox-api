@@ -1,3 +1,4 @@
+'''
 from typing import List
 from pydantic import Field
 
@@ -18,6 +19,6 @@ class TestSite(Site):
 
 site = TestSite(bootstrap_placeholder=True)
 print(site.result)
-
+'''
 
 

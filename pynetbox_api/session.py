@@ -242,7 +242,13 @@ class NetBoxBase:
         **kwargs
     ):
         print('kwargs: ', kwargs)
-        if nb: self.nb = nb
+        # Set instance nb to provided nb or use class-level nb
+        if nb:
+            self.nb = nb
+        else:
+            # Use the class-level nb attribute (set by fixture in tests)
+            self.nb = self.__class__.nb
+            
         self.id = 0
         self.app_name = f'{self.app}.{self.name}'
         self.kwargs = kwargs

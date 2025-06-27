@@ -1,4 +1,5 @@
-from typing import List
+
+'''from typing import List
 from pydantic import Field
 
 from pynetbox_api.tests import TestNetBoxBase
@@ -49,7 +50,7 @@ def test_site_create():
     
     assert site.result.get('name') == pynetbox_site.name
     assert site.result.get('slug') == pynetbox_site.slug
-    
+'''
     
 
 

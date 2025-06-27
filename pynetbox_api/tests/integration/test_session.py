@@ -207,20 +207,13 @@ def establish_demo_session() -> pynetbox.api | None:
     return nb
 
 
-class TestNetBoxBase(NetBoxBase):
-    """
-    Test-specific version of NetBoxBase that uses a separate NetBox session.
-    This allows test code to use a different NetBox connection without affecting
-    the main NetBoxBase class.
-    """
-    nb: pynetbox.api = establish_demo_session()
 
 def test_login_to_demo():
     assert login_to_demo() is True
 
 
-def test_establish_demo_session():
-    pynetbox_session = TestNetBoxBase.nb
+def test_establish_demo_session(pynetbox_demo_session):
+    pynetbox_session = pynetbox_demo_session
     
     assert pynetbox_session is not None
     assert pynetbox_session.version is not None
