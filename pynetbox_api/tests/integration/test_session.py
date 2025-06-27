@@ -1,6 +1,7 @@
 import pynetbox
 from pynetbox_api.session import establish_netbox_session
 from pynetbox_api.database import NetBoxEndpoint
+from pynetbox_api.session import NetBoxBase
 
 import requests
 from bs4 import BeautifulSoup
@@ -8,7 +9,14 @@ from bs4 import BeautifulSoup
 DEMO_URL: str = 'https://demo.netbox.dev/'
 DEMO_USER_NAME: str = 'pynetbox_api'
 DEMO_PASSWORD: str = '@T3st0nly'
-DEMO_TOKEN: str = '4aba5565210cea968a3c47e49c39b0fed8602742'
+LOGIN_SUCCESSFUL: bool = False
+
+demo_config = {
+    'url': DEMO_URL,
+    'username': DEMO_USER_NAME,
+    'password': DEMO_PASSWORD,
+    'token': None,
+}
 
 example_status_response = {
     'django-version': '5.2.1', 
@@ -33,7 +41,9 @@ example_status_response = {
 }
 
 
-def login_to_demo_site() -> requests.Session | None:
+# This function, `login_to_demo_site`, attempts to log into the NetBox demo site using predefined credentials.
+# It can retry the login process once if the initial attempt fails.
+def login_to_demo(mode: str = 'login', already_retried: bool = False) -> bool:
     """Performs a web-based login to the NetBox demo site using the demo credentials.
 
     This function handles CSRF token retrieval and session management for web-based authentication.
@@ -41,53 +51,79 @@ def login_to_demo_site() -> requests.Session | None:
     Returns:
         requests.Session | None: A requests session object if login is successful, None otherwise
     """
-    login_url = 'https://demo.netbox.dev/plugins/demo/login/'
+    global LOGIN_SUCCESSFUL
+    if LOGIN_SUCCESSFUL:
+        return True
+    
+    login_url = ''
+    
+    if mode == 'login':
+        login_url = 'https://demo.netbox.dev/login/'
+    elif mode == 'create_user':
+        login_url = 'https://demo.netbox.dev/plugins/demo/login/'
+    else:
+        raise ValueError(f'Invalid mode: {mode}')
+    
+    #print(login_url)
+    # Create a new session object to manage cookies and headers.
     session = requests.Session()
 
-    # Get the login page to retrieve the CSRF token
+    # Send a GET request to the login page to retrieve the HTML content.
     response = session.get(login_url)
+    
+    # Parse the HTML content using BeautifulSoup to extract the CSRF token.
     soup = BeautifulSoup(response.text, 'html.parser')
     csrf_token = soup.find('input', {'name': 'csrfmiddlewaretoken'}).get('value')
 
-    # Prepare login data
+    # Prepare the login data including the username, password, and CSRF token.
     login_data = {
         'username': DEMO_USER_NAME,
         'password': DEMO_PASSWORD,
         'csrfmiddlewaretoken': csrf_token
     }
 
-    # Perform login
+    # Set the headers for the POST request, including the Referer to the login URL.
     headers = {
         'Referer': login_url
     }
-    login_response = session.post(login_url, data=login_data, headers=headers)
-    print(login_response.text)
-    # Check if login was successful
-    if login_response.ok and 'Log out' in login_response.text:
-        print("Login successful")
-        return session
-    else:
-        print("Login failed")
-        return None
-
-
-def create_test_user() -> dict | None:
-    """Creates a test user on the NetBox demo instance.
     
-    This function requires successful login to the demo site first.
-    https://demo.netbox.dev/plugins/demo/login/
-
-    Returns:
-        dict | None: User information if creation is successful, None otherwise
-
-    Raises:
-        Exception: If login fails
-    """
-    login_to_demo_site()
-    if login_to_demo_site() is None:
-        raise Exception('Login failed')
+    # Send a POST request to the login URL with the login data and headers to attempt login.
+    login_response = session.post(login_url, data=login_data, headers=headers)
+    
+    # If the login failed due to a incorrect username or password, try to create a new user.
+    if 'Please enter a correct username and password' in login_response.text:
+        login_session = login_to_demo(mode='create_user')
+        if login_session:
+            return login_session
+        else:
+            return None
+        
+    #print(login_response.text)
+    # Check if the login failed due to a duplicate user.
+    if 'duplicate key value' in login_response.text or 'already exists' in login_response.text:
+        print("Login failed. User already exists.")
+        return False
+    
+    # Check if the login was successful by verifying the response status
+    if login_response.ok:
+        # If successful, print a success message and return the session object.
+        print("Login successful")
+        LOGIN_SUCCESSFUL = True
+        return True
     else:
-        create_test_user()
+        # If login failed, print a failure message.
+        print("Login failed")
+        # If retry is allowed, return None to indicate failure.
+        if already_retried:
+            return False
+        else:
+            print("Retrying login...")
+            # Otherwise, retry the login process once by calling the function recursively with retry set to True.
+            return login_to_demo(already_retried=True)
+    
+    return False
+
+
 
 netbox_endpoint = NetBoxEndpoint(
     name='Demo NetBox',
@@ -97,6 +133,7 @@ netbox_endpoint = NetBoxEndpoint(
     token='4aba5565210cea968a3c47e49c39b0fed8602742',
 )
 
+'''
 def test_session(nb: pynetbox.api) -> dict | None:
     """Tests the NetBox API session by attempting to retrieve the system status.
 
@@ -147,10 +184,49 @@ def test_session(nb: pynetbox.api) -> dict | None:
             except Exception as e:
                 print(f'Error to get status: {e}')
                 raise e
+'''
+
+
+def establish_demo_session() -> pynetbox.api | None:
+    if login_to_demo() is False:
+        raise Exception('Login failed')
     
-demo_netbox_session = establish_netbox_session(netbox_endpoint)
-test_demo_netbox_session = test_session(demo_netbox_session)
+    # If the token is not set, create a new token
+    if demo_config.get('token') is None:
+        # pynetbox API object (session)
+        nb = pynetbox.api(demo_config.get('url'))
+    
+        demo_config['token'] = nb.create_token(
+            demo_config['username'],
+            demo_config['password']
+        )
+        
+    else:
+        nb = pynetbox.api(demo_config.get('url'), token=demo_config.get('token'))
+        
+    return nb
 
-print(test_demo_netbox_session)
 
+
+def test_login_to_demo():
+    assert login_to_demo() is True
+
+
+def test_establish_demo_session(pynetbox_demo_session):
+    pynetbox_session = pynetbox_demo_session
+    
+    assert pynetbox_session is not None
+    assert pynetbox_session.version is not None
+    assert pynetbox_session.dcim.devices.count() is not None and pynetbox_session.dcim.devices.count() > 0
+    
+    assert isinstance(pynetbox_session, pynetbox.api)
+    
+    pynetbox_status = pynetbox_session.status()
+    assert pynetbox_status is not None
+    assert pynetbox_status.get('django-version') is not None
+    assert pynetbox_status.get('netbox-version') is not None
+    assert pynetbox_status.get('netbox-full-version') is not None
+
+    
+    
 

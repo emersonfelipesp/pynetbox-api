@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel, RootModel, Field
 from typing import List
 
 from pynetbox_api.session import NetBoxBase
@@ -52,7 +52,7 @@ class Site(NetBoxBase):
         asns: list | None = None
         time_zone: str | None = None
         description: str = 'Placeholder object for ease data ingestion'
-        tags: List[int] = [Tags(bootstrap_placeholder=True).get('id', 0)]
+        tags: List[int] = Field(default_factory=lambda: [Tags(bootstrap_placeholder=True).id])
         tenant_group: str | None = None
         tenant: str | None = None
         physical_address: str | None = None
@@ -72,4 +72,4 @@ class Site(NetBoxBase):
     
     # API
     prefix = '/site'
-    api_router = APIRouter(tags=['DCIM / '])
+    api_router = APIRouter(tags=['DCIM / Site'])

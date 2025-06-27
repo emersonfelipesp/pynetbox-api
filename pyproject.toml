@@ -16,3 +16,8 @@ dependencies = [
     "sqlmodel>=0.0.22",
     "typer>=0.15.1",
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+]
