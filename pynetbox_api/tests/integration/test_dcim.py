@@ -32,30 +32,30 @@ def test_create_placeholder_manufacturer(pynetbox_demo_session):
   
 @pytest.mark.integration
 @pytest.mark.dependency(name='test_create_manufacturer')
-def test_create_manufacturer(pynetbox_demo_session):
-    for id in range(3):
-        manufacturer_name = f"Integration Test Manufacturer {id}"
-        manufacturer_slug = f"integration-test-manufacturer-{id}"
-        manufacturer_description = "This is a test manufacturer for integration tests"
-        
-        manufacturer = Manufacturer(
-            nb=pynetbox_demo_session,
-            name=manufacturer_name,
-            slug=manufacturer_slug,
-            description=manufacturer_description
-        )
-        
-        assert manufacturer.result is not None
-        assert manufacturer.id is not None
-        
-        assert dict(manufacturer) is not None
-        
-        dict_manufacturer: dict = dict(manufacturer)
-        assert dict_manufacturer == manufacturer.result
-        
-        assert dict_manufacturer.get('name') == manufacturer_name
-        assert dict_manufacturer.get('slug') == manufacturer_slug
-        assert dict_manufacturer.get('description') == manufacturer_description
+@pytest.mark.parametrize("id", range(3))
+def test_create_manufacturer(pynetbox_demo_session, id):
+    manufacturer_name = f"Integration Test Manufacturer {id}"
+    manufacturer_slug = f"integration-test-manufacturer-{id}"
+    manufacturer_description = "This is a test manufacturer for integration tests"
+    
+    manufacturer = Manufacturer(
+        nb=pynetbox_demo_session,
+        name=manufacturer_name,
+        slug=manufacturer_slug,
+        description=manufacturer_description
+    )
+    
+    assert manufacturer.result is not None
+    assert manufacturer.id is not None
+    
+    assert dict(manufacturer) is not None
+    
+    dict_manufacturer: dict = dict(manufacturer)
+    assert dict_manufacturer == manufacturer.result
+    
+    assert dict_manufacturer.get('name') == manufacturer_name
+    assert dict_manufacturer.get('slug') == manufacturer_slug
+    assert dict_manufacturer.get('description') == manufacturer_description
 
 
 @pytest.mark.integration
@@ -145,7 +145,33 @@ def test_create_placeholder_device_type(pynetbox_demo_session):
     assert dict(device_type_placeholder).get('description') == DeviceType.SchemaIn.model_fields.get('description').default
 
 
-
+@pytest.mark.integration
+@pytest.mark.dependency(name='test_create_device_type')
+@pytest.mark.parametrize("id", range(3))
+def test_create_device_type(pynetbox_demo_session, id):
+    device_type_model = f"Integration Test Device Type {id}"
+    device_type_slug = f"integration-test-device-type-{id}"
+    device_type_description = "This is a test device type for integration tests"
+    
+    device_type = DeviceType(
+        nb=pynetbox_demo_session,
+        manufacturer=Manufacturer(bootstrap_placeholder=True, nb=pynetbox_demo_session).id,
+        model=device_type_model,
+        slug=device_type_slug,
+        description=device_type_description
+    )
+    
+    assert device_type.result is not None
+    assert device_type.id is not None
+    
+    assert dict(device_type) is not None
+    
+    dict_device_type: dict = dict(device_type)
+    assert dict_device_type == device_type.result
+    
+    assert dict_device_type.get('model') == device_type_model
+    assert dict_device_type.get('slug') == device_type_slug
+    assert dict_device_type.get('description') == device_type_description
 
 
 
