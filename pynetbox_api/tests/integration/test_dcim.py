@@ -1,7 +1,7 @@
 import pynetbox
 
 from pynetbox_api.dcim.manufacturer import Manufacturer
-from pynetbox_api.dcim.device import Device
+from pynetbox_api.dcim.device_type import DeviceType
 from pynetbox_api.session import NetBoxBase
 
 import pytest
@@ -126,7 +126,24 @@ def test_get_by_name_manufacturer(pynetbox_demo_session):
     assert manufacturer.json is not None
     
     assert manufacturer.result.get('name') == manufacturer_name
-        
+    
+@pytest.mark.integration
+def test_create_placeholder_device_type(pynetbox_demo_session):
+    device_type_placeholder = DeviceType(bootstrap_placeholder=True, nb=pynetbox_demo_session)
+    
+    assert getattr(device_type_placeholder, 'nb') is not None
+    
+    print('device_type_placeholder', device_type_placeholder.nb)
+    assert device_type_placeholder.result is not None
+    assert device_type_placeholder.id is not None
+    
+    assert dict(device_type_placeholder) is not None
+    assert dict(device_type_placeholder) == device_type_placeholder.result
+    
+    assert dict(device_type_placeholder).get('model') == DeviceType.SchemaIn.model_fields.get('model').default
+    assert dict(device_type_placeholder).get('slug') == DeviceType.SchemaIn.model_fields.get('slug').default
+    assert dict(device_type_placeholder).get('description') == DeviceType.SchemaIn.model_fields.get('description').default
+
 
 
 

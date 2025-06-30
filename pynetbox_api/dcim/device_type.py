@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from pynetbox_api.session import NetBoxBase
+from pynetbox_api.exceptions import FastAPIException
 
 from pydantic import BaseModel, RootModel, Field
 from typing import List, Optional, Literal
@@ -12,6 +13,32 @@ __all__ = [
 ]
 
 class DeviceType(NetBoxBase):
+
+    def _bootstrap_placeholder(self) -> dict:
+        """Override to use instance-specific nb parameter for placeholder creation"""
+        try:
+            # Create manufacturer and tags with instance-specific nb parameter
+            manufacturer_obj = Manufacturer(bootstrap_placeholder=True, nb=self.nb)
+            tags_obj = Tags(bootstrap_placeholder=True, nb=self.nb)
+            
+            # Get the IDs from the result attribute
+            manufacturer_id = manufacturer_obj.result.get('id', 0) if manufacturer_obj.result else 0
+            tags_id = tags_obj.result.get('id', 0) if tags_obj.result else 0
+            
+            # Create a custom SchemaIn instance with the instance's nb parameter
+            custom_schema = self.schema_in(
+                manufacturer=manufacturer_id,
+                tags=[tags_id]
+            )
+            return custom_schema.model_dump(exclude_none=True)
+        
+        except Exception as error:
+            raise FastAPIException(
+                message=f'Error to create placeholder object {self.app}.{self.name}',
+                python_exception=str(error)
+            )
+
+        
     class BasicSchema(BaseModel):
         id: int | None = None
         url: str | None = None

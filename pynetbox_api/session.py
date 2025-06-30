@@ -246,7 +246,7 @@ class NetBoxBase:
         if nb:
             self.nb = nb
         else:
-            # Use the class-level nb attribute (set by fixture in tests)
+            # Use the class-level nb attribute
             self.nb = self.__class__.nb
             
         self.id = 0
@@ -295,7 +295,7 @@ class NetBoxBase:
             self.id = getattr(result, 'id', None) if type(result) != dict else None
             
             print(result)
-            self.result = result if type(result) == dict else result.dict()
+            self.result = result if type(result) == dict else result.model_dump()
             self.id = self.result.get('id', None) if type(self.result) == dict else None
 
 

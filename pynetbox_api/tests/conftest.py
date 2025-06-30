@@ -1,6 +1,5 @@
 import pytest
 
-from pynetbox_api.session import NetBoxBase
 from pynetbox_api.tests.integration.test_session import establish_demo_session
 
 @pytest.fixture(scope='session', autouse=True)
