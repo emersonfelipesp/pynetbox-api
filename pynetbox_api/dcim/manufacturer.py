@@ -8,9 +8,6 @@ from pynetbox_api.session import NetBoxBase
 from pynetbox_api.extras.tag import Tags
 
 __all__ = [
-    "ManufacturerSchema",
-    "ManufacturerSchemaList",
-    "ManufacturerSchemaIn",
     "Manufacturer"
 ]
 
@@ -32,13 +29,13 @@ class Manufacturer(NetBoxBase):
         description: str = 'Manufacturer Placeholder Description'
         tags: List[int] | None = None
 
-    ManufacturerSchemaList = RootModel[List[Schema]]
+    SchemaList = RootModel[List[Schema]]
     
     app = 'dcim'
     name = 'manufacturers'
     schema = Schema
     schema_in = SchemaIn
-    schema_list = ManufacturerSchemaList
+    schema_list = SchemaList
     unique_together = ['name', 'slug']
     
     # API

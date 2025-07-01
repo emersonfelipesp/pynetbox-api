@@ -1,9 +1,14 @@
 from typing import Annotated
+from pathlib import Path
 
 from fastapi import Depends
 from sqlmodel import Field, Session, SQLModel, create_engine
 
-sqlite_file_name = 'database.db'
+# Get the path to the pynetbox-api root directory (2 levels up from this file)
+# Current file: pynetbox-api/pynetbox_api/database.py
+# Root directory: pynetbox-api/
+root_dir = Path(__file__).parent.parent
+sqlite_file_name = root_dir / 'database.db'
 sqlite_url = f'sqlite:///{sqlite_file_name}'
 
 connect_args = {'check_same_thread': False}
