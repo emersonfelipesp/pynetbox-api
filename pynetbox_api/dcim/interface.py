@@ -1,4 +1,4 @@
-from pydantic import BaseModel, RootModel, HttpUrl, AnyHttpUrl
+from pydantic import BaseModel, RootModel, HttpUrl, AnyHttpUrl, Field
 from typing import List, Optional, Union
 
 from pynetbox_api.session import NetBoxBase
@@ -65,12 +65,12 @@ class Interface(NetBoxBase):
         count_fhrp_groups: int | None = None
 
     class SchemaIn(BaseModel):
-        device: int = Device(bootstrap_placeholder=True).get('id', 0)
+        device: int = Field(default_factory=lambda: Device(bootstrap_placeholder=True).get('id', 0))
         name: str = 'Interface Placeholder'
         type: str = 'other'
         enabled: bool = True
         description: str = 'Interface Placeholder'
-        tags: List[int] = [Tags(bootstrap_placeholder=True).get('id', 0)]
+        tags: List[int] = Field(default_factory=lambda: [Tags(bootstrap_placeholder=True).get('id', 0)])
 
     SchemaList = RootModel[List[Schema]]
 

@@ -8,10 +8,30 @@ from pynetbox_api.dcim.device_role import DeviceRole
 from pynetbox_api.dcim.device_type import DeviceType
 from pynetbox_api.extras.tag import Tags
 from pynetbox_api.virtualization.cluster import Cluster
-
+from pynetbox_api.exceptions import FastAPIException
 from pydantic import Field
 
 class Device(NetBoxBase):
+    
+    def _bootstrap_placeholder(self) -> dict:
+        """Override to use instance-specific nb parameter for placeholder creation"""
+        try:
+            # Create a custom SchemaIn instance with the instance's nb parameter
+            custom_schema = self.schema_in(
+                role=DeviceRole(bootstrap_placeholder=True, nb=self.nb).id,
+                tags=[Tags(bootstrap_placeholder=True, nb=self.nb).id],
+                device_type=DeviceType(bootstrap_placeholder=True, nb=self.nb).id,
+                site=Site(bootstrap_placeholder=True, nb=self.nb).id
+            )
+            return custom_schema.model_dump(exclude_none=True)
+        
+        except Exception as error:
+            raise FastAPIException(
+                message=f'Error to create placeholder object {self.app}.{self.name}',
+                python_exception=str(error)
+            )
+    
+            
     class BasicSchema(BaseModel):
         id: int | None = None
         url: str | None = None

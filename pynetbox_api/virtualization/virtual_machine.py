@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel, RootModel, Field
 from typing import List, Optional, Union
 from pynetbox_api.utils import GenericSchema
 from pynetbox_api.virtualization.cluster import Cluster
@@ -67,13 +67,13 @@ class VirtualMachine(NetBoxBase):
 
     class SchemaIn(BaseModel):
         name: str = 'Virtual Machine Placeholder'
-        role: int= Role(bootstrap_placeholder=True).get('id', 0)
+        role: int = Field(default_factory=lambda: Role(bootstrap_placeholder=True).get('id', 0))
         status: str = 'active'
         description: str | None = None
         serial: str | None = None
         tags: List[int] = []
         site: int | None = None
-        cluster: int = Cluster(bootstrap_placeholder=True).get('id', 0)
+        cluster: int = Field(default_factory=lambda: Cluster(bootstrap_placeholder=True).get('id', 0))
         device: int | None = None
         tenant_group: str | None = None
         tenant: str | None = None

@@ -80,7 +80,7 @@ class DeviceType(NetBoxBase):
         inventory_item_template_count: int | None = None
 
 
-    class SchemaIn(BaseModel):
+    class SchemaIn(BaseModel):  
         manufacturer: int = Field(default_factory=lambda: Manufacturer(bootstrap_placeholder=True).id)
         model: str = 'Device Type Placeholder'
         slug: str = 'device-type-placeholder'

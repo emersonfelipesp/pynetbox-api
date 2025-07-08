@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel, RootModel, Field
 from typing import List
 from pynetbox_api.virtualization.virtual_machine import VirtualMachine
 from pynetbox_api.utils import GenericSchema
@@ -43,7 +43,7 @@ class VMInterfaceSchema(GenericSchema, VMInterfaceBasicSchema):
 
 
 class VMInterfaceSchemaIn(BaseModel):
-    virtual_machine: int = VirtualMachine(bootstrap_placeholder=True).get('id', 0)
+    virtual_machine: int = Field(default_factory=lambda: VirtualMachine(bootstrap_placeholder=True).get('id', 0))
     name: str = 'Virtual Machine Interface Placeholder'
     enabled: bool = True
     description: str | None = None

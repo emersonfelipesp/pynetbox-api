@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel, RootModel, Field
 from typing import List
 from pynetbox_api.utils import GenericSchema
 from pynetbox_api.virtualization.cluster_type import ClusterType
@@ -41,7 +41,7 @@ class Cluster(NetBoxBase):
 
     class SchemaIn(BaseModel):
         name: str = 'Cluster Placeholder'
-        type: int = ClusterType(bootstrap_placeholder=True).get('id', 0)
+        type: int = Field(default_factory=lambda: ClusterType(bootstrap_placeholder=True).get('id', 0))
         group: int | None = None
         status: str = 'active'
         description: str | None = None

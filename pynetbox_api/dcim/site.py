@@ -4,12 +4,30 @@ from typing import List
 
 from pynetbox_api.session import NetBoxBase
 from pynetbox_api.extras.tag import Tags
+from pynetbox_api.exceptions import FastAPIException
+
 
 __all__ = [
     "Site"
 ]
 
 class Site(NetBoxBase):
+    
+    def _bootstrap_placeholder(self) -> dict:
+        """Override to use instance-specific nb parameter for placeholder creation"""
+        try:
+            # Create a custom SchemaIn instance with the instance's nb parameter
+            custom_schema = self.schema_in(
+                tags=[Tags(bootstrap_placeholder=True, nb=self.nb).id]
+            )
+            return custom_schema.model_dump(exclude_none=True)
+        
+        except Exception as error:
+            raise FastAPIException(
+                message=f'Error to create placeholder object {self.app}.{self.name}',
+                python_exception=str(error)
+            )
+            
     class BasicSchema(BaseModel):
         id: int | None = None
         url: str | None = None
