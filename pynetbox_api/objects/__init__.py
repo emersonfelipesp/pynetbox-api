@@ -7,9 +7,9 @@ from pynetbox_api.dcim.site import Site
 class DcimObjects:
     def __init__(self, api):
         self.api = api
-        self.manufacturer = Manufacturer(nb=api.session)
-        self.device_type = DeviceType(nb=api.session)
-        self.device_role = DeviceRole(nb=api.session)
-        self.device = Device(nb=api.session)
-        self.site = Site(nb=api.session)
+        self.manufacturers = Manufacturer(nb=api.session)
+        self.device_types = DeviceType(nb=api.session)
+        self.device_roles = DeviceRole(nb=api.session)
+        self.devices = Device(nb=api.session)
+        self.sites = Site(nb=api.session)
         

@@ -1,5 +1,6 @@
 import pytest
 
+from pynetbox_api import NetBoxAPI
 from pynetbox_api.tests.integration.test_session import establish_demo_session
 
 @pytest.fixture(scope='session', autouse=True)
@@ -21,3 +22,12 @@ def pynetbox_demo_session():
     
     yield session
 
+@pytest.fixture(scope='session', autouse=True)
+def netbox_api(pynetbox_demo_session):
+    '''
+    This fixture is used to set the NetBoxAPI object to the demo session.
+    This is used to avoid having to pass the NetBoxAPI object to each test function.
+    '''
+    return NetBoxAPI(
+        pynetbox_api=pynetbox_demo_session
+    )

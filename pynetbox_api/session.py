@@ -29,9 +29,6 @@ from pynetbox_api.cache import global_cache
 # Database connection imports
 #
 from sqlmodel import select
-from pynetbox_api.database import NetBoxEndpoint, get_session
-from sqlalchemy.exc import OperationalError
-from pynetbox_api.database import create_db_and_tables
 from pynetbox_api.base import NetBoxBase
 from pynetbox_api.objects import DcimObjects
 
@@ -41,25 +38,6 @@ NETBOX_URL = "https://netbox.example.com"
 NETBOX_TOKEN = "provide-your-token"
 NETBOX_STATUS: bool = False
 NETBOX_SESSION = None  # Global session variable
-
-def get_netbox_endpoint() -> NetBoxEndpoint | None:
-    try:
-        # Get the database session
-        database_session = next(get_session())
-        
-        # Get the first NetBox endpoint from the database
-        netbox_endpoint = database_session.exec(select(NetBoxEndpoint)).first()
-        
-        # Return the NetBox endpoint
-        return netbox_endpoint
-
-    except OperationalError as error:
-        print('Table does not exist, creating it...')
-        create_db_and_tables()
-        
-        # Try again
-        return get_netbox_endpoint()
-
 
 class NetBoxAPI:
     
@@ -87,7 +65,24 @@ class NetBoxAPI:
         
         self.dcim = DcimObjects(api=self)
         
+''' 
+def get_netbox_endpoint() -> NetBoxEndpoint | None:
+    try:
+        # Get the database session
+        database_session = next(get_session())
         
+        # Get the first NetBox endpoint from the database
+        netbox_endpoint = database_session.exec(select(NetBoxEndpoint)).first()
+        
+        # Return the NetBox endpoint
+        return netbox_endpoint
+
+    except OperationalError as error:
+        print('Table does not exist, creating it...')
+        create_db_and_tables()
+        
+        # Try again
+        return get_netbox_endpoint()
 
 def establish_netbox_session(netbox_endpoint: NetBoxEndpoint) -> pynetbox.api | None:
     warnings.warn(
@@ -167,7 +162,7 @@ def establish_netbox_session(netbox_endpoint: NetBoxEndpoint) -> pynetbox.api | 
     
 netbox_endpoint = get_netbox_endpoint()
 RawNetBoxSession = establish_netbox_session(netbox_endpoint=netbox_endpoint) if netbox_endpoint else None
-
+'''
 # Export NetBoxBase for backward compatibility
-__all__ = ['NetBoxAPI', 'establish_netbox_session', 'RawNetBoxSession', 'NetBoxBase']
+__all__ = ['NetBoxAPI']
 

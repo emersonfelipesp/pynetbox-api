@@ -2,7 +2,7 @@ import pynetbox
 
 from pynetbox_api.dcim.manufacturer import Manufacturer
 from pynetbox_api.dcim.device_type import DeviceType
-from pynetbox_api.session import NetBoxBase
+from pynetbox_api.dcim.device import Device
 
 import pytest
 
@@ -174,17 +174,28 @@ def test_create_device_type(pynetbox_demo_session, id):
     assert dict_device_type.get('description') == device_type_description
 
 
-
 '''
-device_new = Device(
-    name="Test Device"
-)
-print('\ndevice_new.result: ', device_new.result)
-print('\ndict(device_new): ', dict(device_new))
+def test_create_placeholder_device(netbox_api):
+    device_placeholder = netbox_api.dcim.devices(bootstrap_placeholder=True)
+
+    assert device_placeholder.result is not None
+    assert device_placeholder.id is not None
+    
+    assert dict(device_placeholder) is not None
+    assert dict(device_placeholder) == device_placeholder.result
+    
+    assert dict(device_placeholder).get('name') == Device.SchemaIn.model_fields.get('name').default
 '''
 
+@pytest.mark.integration
+def test_create_device(netbox_api):
+    device = netbox_api.dcim.devices(name="Test Device pynetbox-api")
 
-
+    assert device.result is not None
+    assert device.id is not None
+    assert device.json is not None
+    
+    assert device.json.get('name') == "Test Device pynetbox-api"
 
 
 

@@ -189,6 +189,7 @@ class NetBoxBase:
             
             print(result)
             self.result = result if type(result) == dict else result.model_dump()
+            self.json = self.result  # Set json property to match result
             self.id = self.result.get('id', None) if type(self.result) == dict else None
 
 
@@ -227,7 +228,7 @@ class NetBoxBase:
         """
         return getattr(self, 'result', {})
 
-    def __call__(self, **kwargs):
+    def __call__(self, bootstrap_placeholder: bool = False, **kwargs):
         """
         Make NetBoxBase instances callable to create new objects.
         This allows usage like: nb_api.dcim.manufacturer(name='test', slug='test')

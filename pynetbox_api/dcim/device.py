@@ -113,7 +113,9 @@ class Device(NetBoxBase):
 
     SchemaList = RootModel[List[Schema]]
     app = 'dcim'
-    name = 'devices'
+    name = 'devices'             
+    
+    
     schema = Schema
     schema_basic = BasicSchema
     schema_in = SchemaIn

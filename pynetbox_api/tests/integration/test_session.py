@@ -1,7 +1,5 @@
 import pynetbox
-from pynetbox_api.session import establish_netbox_session
-from pynetbox_api.database import NetBoxEndpoint
-from pynetbox_api.session import NetBoxBase
+from pynetbox_api.session import NetBoxAPI
 
 import requests
 from bs4 import BeautifulSoup
@@ -41,7 +39,7 @@ example_status_response = {
 }
 
 
-# This function, `login_to_demo_site`, attempts to log into the NetBox demo site using predefined credentials.
+# This function, `login_to_demo`, attempts to log into the NetBox demo site using predefined credentials.
 # It can retry the login process once if the initial attempt fails.
 def login_to_demo(mode: str = 'login', already_retried: bool = False) -> bool:
     """Performs a web-based login to the NetBox demo site using the demo credentials.

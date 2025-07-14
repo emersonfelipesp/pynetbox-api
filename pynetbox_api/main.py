@@ -10,22 +10,11 @@ from pynetbox_api.exceptions import FastAPIException
 from pynetbox_api.api.routes import netbox_router
 
 from pynetbox_api.cache import global_cache
-
-# Database Imports
-from pynetbox_api.database import SessionDep, NetBoxEndpoint
-from sqlmodel import select
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    from pynetbox_api.database import create_db_and_tables
-    create_db_and_tables()
-    yield
     
 app = FastAPI(
     title='pynetbox API',
     description='FastAPI wrapper for pynetbox',
     version='0.1',
-    lifespan=lifespan
 )
 
 # Template and Static Files
@@ -103,41 +92,3 @@ async def set_cache(
     )] = None
 ):
     return global_cache.set(key=key, value=value, return_value=True)
-
-#
-# Endpoints: /netbox/<endpoint>
-#
-
-@app.post('/endpoint')
-def create_netbox_endpoint(netbox: NetBoxEndpoint, session: SessionDep) -> NetBoxEndpoint:
-    session.add(netbox)
-    session.commit()
-    session.refresh(netbox)
-    return netbox
-
-@app.get('/endpoint')
-def get_netbox_endpoints(
-    session: SessionDep,
-    offset: int = 0,
-    limit: Annotated[int, Query(le=100)] = 100
-) -> list[NetBoxEndpoint]:
-    netbox_endpoints = session.exec(select(NetBoxEndpoint).offset(offset).limit(limit)).all()
-    return netbox_endpoints
-
-GetNetBoxEndpoint = Annotated[list[NetBoxEndpoint], Depends(get_netbox_endpoints)]
-
-@app.get('/endpoint/{netbox_id}')
-def get_netbox_endpoint(netbox_id: int, session: SessionDep) -> NetBoxEndpoint:
-    netbox_endpoint = session.get(NetBoxEndpoint, netbox_id)
-    if not netbox_endpoint:
-        raise FastAPIException(status_code=404, detail="Netbox Endpoint not found")
-    return netbox_endpoint
-
-@app.delete('/endpoint/{netbox_id}')
-def delete_netbox_endpoint(netbox_id: int, session: SessionDep) -> dict:
-    netbox_endpoint = session.get(NetBoxEndpoint, netbox_id)
-    if not netbox_endpoint:
-        raise FastAPIException(status_code=404, detail='NetBox Endpoint not found.')
-    session.delete(netbox_endpoint)
-    session.commit()
-    return {'message': 'NetBox Endpoint deleted.'}

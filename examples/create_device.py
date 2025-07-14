@@ -11,13 +11,18 @@ token = netbox_session.create_token(DEMO_USER_NAME, DEMO_PASSWORD)
 nb_api = NetBoxAPI(pynetbox_api=netbox_session)
 
 # Create a manufacturer
-device = nb_api.dcim.device(
+device = nb_api.dcim.devices(
     name='Creating a device',
     slug='creating-a-device',
     description='This is a test device',
 )
 
-print(nb_api.dcim.device.update)
+print(f'nb_api.dcim.devices.bootstrap_placeholder: {nb_api.dcim.devices.bootstrap_placeholder}')
+
+print(nb_api.dcim.devices.update)
 
 print('\nTeste: ', device)
 print(device.json)
+
+print(device.id)
+print(device.json.get('name'))
