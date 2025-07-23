@@ -5,6 +5,7 @@ from pynetbox_api.utils import GenericSchema
 from pynetbox_api.virtualization.cluster_type import ClusterType
 from pynetbox_api.virtualization.cluster_group import ClusterGroup
 from pynetbox_api.session import NetBoxBase
+from pynetbox_api.exceptions import FastAPIException
 
 __all__ = [
     'ClusterBasicSchema',
@@ -15,6 +16,25 @@ __all__ = [
 ]
 
 class Cluster(NetBoxBase):
+    def _bootstrap_placeholder(self) -> dict:
+        """
+        Override to use instance-specific nb (netbox session) parameter for placeholder creation
+        The default placeholder creation uses the default nb parameter (class level)
+        """
+        try:
+            # Create a custom SchemaIn instance with the instance's nb parameter
+            cluster_type = ClusterType(bootstrap_placeholder=True, nb=self.nb)
+            type_id = cluster_type.id if cluster_type.id is not None else 0
+            return self.schema_in(
+                type=type_id
+            ).model_dump(exclude_none=True)
+        
+        except Exception as error:
+            raise FastAPIException(
+                message=f'Error to create placeholder object {self.app}.{self.name}',
+                python_exception=str(error)
+            )
+            
     class BasicSchema(BaseModel):
         id: int | None = None
         url: str | None = None
@@ -41,7 +61,7 @@ class Cluster(NetBoxBase):
 
     class SchemaIn(BaseModel):
         name: str = 'Cluster Placeholder'
-        type: int = Field(default_factory=lambda: ClusterType(bootstrap_placeholder=True).get('id', 0))
+        type: int = Field(default_factory=lambda: ClusterType(bootstrap_placeholder=True).id or 0)
         group: int | None = None
         status: str = 'active'
         description: str | None = None

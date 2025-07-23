@@ -133,7 +133,6 @@ def test_create_placeholder_device_type(pynetbox_demo_session):
     
     assert getattr(device_type_placeholder, 'nb') is not None
     
-    print('device_type_placeholder', device_type_placeholder.nb)
     assert device_type_placeholder.result is not None
     assert device_type_placeholder.id is not None
     

@@ -30,7 +30,7 @@ from pynetbox_api.cache import global_cache
 #
 from sqlmodel import select
 from pynetbox_api.base import NetBoxBase
-from pynetbox_api.objects import DcimObjects
+from pynetbox_api.objects import DcimObjects, VirtualizationObjects
 
 
 # Global variables for NetBox connection
@@ -64,7 +64,7 @@ class NetBoxAPI:
             )
         
         self.dcim = DcimObjects(api=self)
-        
+        self.virtualization = VirtualizationObjects(api=self)
 ''' 
 def get_netbox_endpoint() -> NetBoxEndpoint | None:
     try:

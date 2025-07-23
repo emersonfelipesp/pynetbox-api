@@ -17,11 +17,16 @@ class Device(NetBoxBase):
         """Override to use instance-specific nb parameter for placeholder creation"""
         try:
             # Create a custom SchemaIn instance with the instance's nb parameter
+            role_obj = DeviceRole(bootstrap_placeholder=True, nb=self.nb)
+            tags_obj = Tags(bootstrap_placeholder=True, nb=self.nb)
+            device_type_obj = DeviceType(bootstrap_placeholder=True, nb=self.nb)
+            site_obj = Site(bootstrap_placeholder=True, nb=self.nb)
+            
             custom_schema = self.schema_in(
-                role=DeviceRole(bootstrap_placeholder=True, nb=self.nb).id,
-                tags=[Tags(bootstrap_placeholder=True, nb=self.nb).id],
-                device_type=DeviceType(bootstrap_placeholder=True, nb=self.nb).id,
-                site=Site(bootstrap_placeholder=True, nb=self.nb).id
+                role=role_obj.id if role_obj.id is not None else 0,
+                tags=[tags_obj.id if tags_obj.id is not None else 0],
+                device_type=device_type_obj.id if device_type_obj.id is not None else 0,
+                site=site_obj.id if site_obj.id is not None else 0
             )
             return custom_schema.model_dump(exclude_none=True)
         
@@ -86,15 +91,15 @@ class Device(NetBoxBase):
 
     class SchemaIn(BaseModel):
         name: str = 'Device Placeholder'
-        role: int = Field(default_factory=lambda: DeviceRole(bootstrap_placeholder=True).id)
+        role: int = Field(default_factory=lambda: DeviceRole(bootstrap_placeholder=True).id or 0)
         description: str = 'Placeholder object for ease data ingestion'
         #tags: List[int] = [Tags(bootstrap_placeholder=True).get('id', 0)]
-        tags: List[int] = Field(default_factory=lambda: [Tags(bootstrap_placeholder=True).id])
-        device_type: int = Field(default_factory=lambda: DeviceType(bootstrap_placeholder=True).id)
+        tags: List[int] = Field(default_factory=lambda: [Tags(bootstrap_placeholder=True).id or 0])
+        device_type: int = Field(default_factory=lambda: DeviceType(bootstrap_placeholder=True).id or 0)
         airflow: str | None = None
         serial: str | None = None
         asset_tag: str | None = None
-        site: int = Field(default_factory=lambda: Site(bootstrap_placeholder=True).id)
+        site: int = Field(default_factory=lambda: Site(bootstrap_placeholder=True).id or 0)
         location: str | None = None
         position: int | None = None
         rack: str | None = None

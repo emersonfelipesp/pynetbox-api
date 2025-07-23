@@ -21,3 +21,14 @@ manufacturer = Manufacturer(
 
 print('\nTeste: ', manufacturer)
 print(manufacturer.json)
+
+
+#print(netbox_session.dcim.devices.get(tenant_id=5))
+
+
+print(manufacturer.placeholder)
+print(manufacturer.placeholder)
+print(manufacturer.placeholder)
+print(manufacturer.placeholder)
+
+print(Manufacturer().placeholder)

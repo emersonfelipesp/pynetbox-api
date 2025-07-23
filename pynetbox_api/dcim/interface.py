@@ -49,28 +49,28 @@ class Interface(NetBoxBase):
         untagged_vlan: str | None = None
         tagged_vlans: List[str] | None = None
         qinq_svlan: str | None = None
-        vlan_translation_policy: Optional[Union[str, None]] = None
+        vlan_translation_policy: str | None = None
         mark_connected: bool | None = None
-        cable_end: Optional[Union[str, None]] = None
-        wireless_link: Optional[Union[str, None]] = None
+        cable_end: str | None = None
+        wireless_link: str | None = None
         link_peers: List = []
-        link_peers_type: Optional[Union[str, None]] = None
+        link_peers_type: str | None = None
         wireless_lans: List = []
-        vrf: Optional[Union[str, None]] = None
-        l2vpn_termination: Optional[Union[str, None]] = None
-        connected_endpoints: Optional[Union[str, None]] = None
-        connected_endpoints_type: Optional[Union[str, None]] = None
-        connected_endpoints_reachable: Optional[Union[str, None]] = None
+        vrf: str | None = None
+        l2vpn_termination: str | None = None
+        connected_endpoints: str | None = None
+        connected_endpoints_type: str | None = None
+        connected_endpoints_reachable: str | None = None
         count_ipaddresses: int | None = None
         count_fhrp_groups: int | None = None
 
     class SchemaIn(BaseModel):
-        device: int = Field(default_factory=lambda: Device(bootstrap_placeholder=True).get('id', 0))
+        device: int = Field(default_factory=lambda: Device(bootstrap_placeholder=True).id or 0)
         name: str = 'Interface Placeholder'
         type: str = 'other'
         enabled: bool = True
         description: str = 'Interface Placeholder'
-        tags: List[int] = Field(default_factory=lambda: [Tags(bootstrap_placeholder=True).get('id', 0)])
+        tags: List[int] = Field(default_factory=lambda: [Tags(bootstrap_placeholder=True).id or 0])
 
     SchemaList = RootModel[List[Schema]]
 

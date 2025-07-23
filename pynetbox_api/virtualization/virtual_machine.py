@@ -9,7 +9,9 @@ from pynetbox_api.session import NetBoxBase
 from pynetbox_api.ipam.ip_address import IPAddress
 from pynetbox_api.dcim.device import Device
 from pynetbox_api.dcim.platform import Platform
-    
+from pynetbox_api.extras.tag import Tags
+from pynetbox_api.exceptions import FastAPIException
+
 __all__ = [
     'VirtualMachine',
 ]
@@ -18,6 +20,29 @@ from enum import Enum
 
 
 class VirtualMachine(NetBoxBase):
+    def _bootstrap_placeholder(self) -> dict:
+        """
+        Override to use instance-specific nb (netbox session) parameter for placeholder creation
+        The default placeholder creation uses the default nb parameter (class level)
+        """
+        try:
+            # Create a custom SchemaIn instance with the instance's nb parameter
+            tags_obj = Tags(bootstrap_placeholder=True, nb=self.nb)
+            role_obj = Role(bootstrap_placeholder=True, nb=self.nb)
+            cluster_obj = Cluster(bootstrap_placeholder=True, nb=self.nb)
+            
+            return self.schema_in(
+                tags=[tags_obj.id if tags_obj.id is not None else 0],
+                role=role_obj.id if role_obj.id is not None else 0,
+                cluster=cluster_obj.id if cluster_obj.id is not None else 0
+            ).model_dump(exclude_none=True)
+        
+        except Exception as error:
+            raise FastAPIException(
+                message=f'Error to create placeholder object {self.app}.{self.name}',
+                python_exception=str(error)
+            )
+            
     class StatusField(Enum):
         """
         Key are Netbox Status.
@@ -67,13 +92,13 @@ class VirtualMachine(NetBoxBase):
 
     class SchemaIn(BaseModel):
         name: str = 'Virtual Machine Placeholder'
-        role: int = Field(default_factory=lambda: Role(bootstrap_placeholder=True).get('id', 0))
+        role: int = Field(default_factory=lambda: Role(bootstrap_placeholder=True).id or 0)
         status: str = 'active'
         description: str | None = None
         serial: str | None = None
-        tags: List[int] = []
+        tags: List[int] = Field(default_factory=lambda: [Tags(bootstrap_placeholder=True).id or 0])
         site: int | None = None
-        cluster: int = Field(default_factory=lambda: Cluster(bootstrap_placeholder=True).get('id', 0))
+        cluster: int = Field(default_factory=lambda: Cluster(bootstrap_placeholder=True).id or 0)
         device: int | None = None
         tenant_group: str | None = None
         tenant: str | None = None
