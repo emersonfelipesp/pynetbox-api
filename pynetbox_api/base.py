@@ -2,7 +2,7 @@ import json
 import hashlib
 from typing import Optional, Union, Any
 from typing_extensions import Annotated, Doc
-
+from abc import abstractmethod
 import pynetbox
 import requests
 from pydantic import BaseModel
@@ -11,7 +11,7 @@ from pydantic import BaseModel
 # Import custom exceptions and cache
 from pynetbox_api.exceptions import FastAPIException
 from pynetbox_api.cache import global_cache
-
+from pynetbox_api.logger import logger
 
 # Global variables that need to be defined
 NETBOX_STATUS = False
@@ -27,83 +27,6 @@ class NetBoxBase:
         bootstrap_placeholder: Define if placeholder object will be created during class instantiation or if no object is provided.
     """
     
-    
-    """THIS WAS USED TO RETURN JSON API-RESPONSE AS OBJECT INSTANCE
-    def __new__(
-        cls,
-        nb: pynetbox.api = None,
-        bootstrap_placeholder: bool = False,
-        is_bootstrap: bool = False,
-        cache: bool = True,
-        use_placeholder: bool = True,
-        **kwargs
-    ):
-        if not nb:
-            print('No custom NetBox API connection provided.')
-        else:
-            # Set the custom NetBox API connection
-            instance.nb = nb
-            
-        # Create a new instance of the class
-        instance = super().__new__(cls)
-        
-        instance.id = 0
-        instance.result = {}
-        
-        try:
-            print(instance.nb)
-            instance.app_name = f'{instance.app}.{instance.name}'
-            instance.object = getattr(getattr(instance.nb, instance.app), instance.name)
-        except Exception as error:
-            raise FastAPIException(
-                message=f'Error to get object {instance.app}.{instance.name}',
-                detail='__new__ method',
-                python_exception=str(error)
-            )
-        # Check if the NetBox API is reachable
-        if not instance.check_status(): return {}
-        
-        instance.use_placeholder = use_placeholder
-        instance.bootstrap_placeholder = bootstrap_placeholder
-        
-        # Check if the instance is being created with arguments
-        if kwargs and not bootstrap_placeholder:
-            # Return post method result as the class instance
-            result: dict = instance.post(
-                json=kwargs,
-                cache=cache,
-                is_bootstrap=is_bootstrap,
-                merge_with_placeholder=use_placeholder
-            )
-
-            instance.id = result.get('id', None) if type(result) == dict else None
-            instance.id = getattr(result, 'id', None) if type(result) != dict else None
-            
-            print(result)
-            return result if type(result) == dict else result.dict()
-
-        if bootstrap_placeholder:
-            instance.placeholder_dict = instance._bootstrap_placeholder()
-            #print(f'instance.placeholder_dict: {instance.placeholder_dict}')
-            try:
-                return instance.post(
-                    json=instance.placeholder_dict,
-                    cache=cache,
-                    is_bootstrap=True,
-                    merge_with_placeholder=use_placeholder
-                )
-                # Return the instance as is if being created with arguments
-                
-            except FastAPIException as error:
-                print(f'Bootstrap placeholder object failed. Error: {error}')
-                raise FastAPIException(
-                    message=f'Error to create object {instance.app}.{instance.name}',
-                    python_exception=str(error)
-                )
-        
-        # Return the instance as is if not being created with arguments
-        return instance
-    """
     
     def __init__(
         self,
@@ -127,7 +50,7 @@ class NetBoxBase:
                 The schema is defined in the class as 'schema_in'.
                 """
             )
-        ] = True,
+        ] = False,
         **kwargs
     ):
 
@@ -187,12 +110,39 @@ class NetBoxBase:
             self.id = result.get('id', None) if type(result) == dict else None
             self.id = getattr(result, 'id', None) if type(result) != dict else None
             
-            print(result)
             self.result = result if type(result) == dict else result.model_dump()
             self.json = self.result  # Set json property to match result
             self.id = self.result.get('id', None) if type(self.result) == dict else None
 
+    # Shared placeholder object between all instances of the class (subclass-aware)
+    _placeholder = None
+    
+    @property
+    def placeholder(self):
+        if self.__class__._placeholder is None:
+            # Get default values from the schema
+            default_values = self.schema_in().model_dump(exclude_none=True)
+            
+            try:
+                # Check if the object already exists on NetBox
+                check_duplicate = self.object.get(**default_values)
+            except ValueError as error:
+                raise FastAPIException(
+                    message=f'Error to get object {self.app}.{self.name}',
+                    python_exception=str(error)
+                )
+    
+            
+            # If the object already exists, return the object
+            if check_duplicate:
+                self.__class__._placeholder = check_duplicate
+            else:
+                # Base on the default values, create a placeholder object on NetBox
+                self.__class__._placeholder = self.schema(**dict(self.object.create(default_values))).model_dump()
 
+        # Return the placeholder object
+        return self.__class__._placeholder
+    
     def __dict__(self) -> dict:
         """
         Return the result attribute when dict() is called on the instance.
@@ -243,25 +193,24 @@ class NetBoxBase:
 
 
     def check_status(self) -> bool:
-        print(self.nb)
         global NETBOX_STATUS, NETBOX_SESSION
         base_message: str = 'Unexpected error to connect to NetBox API using check_status() method.'
         try:
             if NETBOX_STATUS == False or NETBOX_SESSION is None:
-                print('Trying to get NetBox API status...')
+                logger.info('Trying to get NetBox API status...')
                 self.nb.status()
-                print('NetBox API status received successfully.')
+                logger.info('NetBox API status received successfully.')
                 NETBOX_STATUS = True
                 NETBOX_SESSION = self.nb
                 return NETBOX_STATUS
             else:
                 return NETBOX_STATUS
         except pynetbox.core.query.ContentError as error:
-            print(f'Error to connect to NetBox API. The API URL is invalid.\n{error}')
+            logger.error(f'Error to connect to NetBox API. The API URL is invalid.\n{error}')
             NETBOX_STATUS = False
             NETBOX_SESSION = None
         except pynetbox.RequestError as error:
-            print(f'Error to connect to NetBox API.\nError: {error}')
+            logger.error(f'Error to connect to NetBox API.\nError: {error}')
             NETBOX_STATUS = False
             NETBOX_SESSION = None
         except requests.exceptions.SSLError as error:
@@ -269,16 +218,16 @@ class NetBoxBase:
             # (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)')))
             # This error happens when the certificate is self-signed.
             # The "solution" is to disable the SSL verification.
-            print(f'SSL Error trying to connect to NetBox API.\nError: {error}')
+            logger.error(f'SSL Error trying to connect to NetBox API.\nError: {error}')
             self.nb.http_session.verify = False
             return self.check_status()
         
         except FastAPIException as error: 
-            print(f'{base_message}\nError: {error}')
+            logger.error(f'{base_message}\nError: {error}')
             NETBOX_STATUS = False
             NETBOX_SESSION = None
         except Exception as error: 
-            print(f'{base_message}.\nError: {error}')
+            logger.error(f'{base_message}.\nError: {error}')
             NETBOX_STATUS = False
             NETBOX_SESSION = None
         
@@ -301,6 +250,7 @@ class NetBoxBase:
     placeholder_dict: dict = {}
     json: dict = {}
     result: dict = {}
+
     
     nb: pynetbox.api | None = None
     
@@ -323,7 +273,6 @@ class NetBoxBase:
         # Get all values from the schema instance, excluding unset values
         try:
             bootstrap_default_values = self.schema_in().model_dump(exclude_none=True)
-            print('bootstrap_default_values: ', bootstrap_default_values)
             return bootstrap_default_values
         except Exception as error:
             raise FastAPIException(
@@ -338,9 +287,19 @@ class NetBoxBase:
         is_bootstrap: bool,
         cache: bool = True
     ) -> dict:
+        '''
+        This code is part of a method `_check_duplicate` that checks for duplicate objects based on unique constraints.
+        It constructs a `search_dict` using fields defined in `self.unique_together`.
+        If a field is in the `names_to_append` list, it appends '_id' to the field name and retrieves its value from the `json` dictionary.
+        Otherwise, it directly retrieves the field's value from the `json` dictionary.
+        The method then attempts to find a duplicate object using the constructed `search_dict`.
+        If a duplicate is found, it returns the object as a dictionary using the schema; otherwise, it returns an empty dictionary.
+        '''
+            
         try:
             search_dict: dict = {}
             names_to_append = ['type', 'device', 'module_bay', 'device_type', 'role', 'manufacturer', 'cluster_type', 'virtual_machine']
+            
             
             for field in self.unique_together:
                 if field in names_to_append:
@@ -368,7 +327,8 @@ class NetBoxBase:
         json: dict,
         is_bootstrap: bool,
         unique_together_json: dict,
-        cache: bool = True
+        cache: bool = True,
+        use_placeholder: bool = True
     ) -> dict:
         try:
             result_object: dict = {}
@@ -395,7 +355,6 @@ class NetBoxBase:
             try:
                 # If 'merge_with_placeholder' is True, it will merge the provided json with the placeholder
                 merged_json = self.placeholder_dict | json if self.use_placeholder else json
-                print('merged_json: ', merged_json)
                 #result_object = self.schema(**dict(self.object.create(**merged_json))).dict()
                 result_object = self.schema(**dict(self.object.create(**merged_json)))
                 
@@ -442,7 +401,6 @@ class NetBoxBase:
         is_bootstrap: bool = False,
         **kwargs
     ) -> dict:
-        print('id: ', id)
         try:
             if id:
                 get_object = None
@@ -461,8 +419,6 @@ class NetBoxBase:
                             value=get_object
                         )
                 
-                
-                  
                 json_object = self.schema(**dict(get_object)).model_dump() if self.schema else get_object
                 self.result = json_object
                 self.id = json_object.get('id', None)
@@ -476,7 +432,6 @@ class NetBoxBase:
                 try:
                     if cache:
                         if is_bootstrap:
-                            #print('object is bootstrap')
                             cache_object = global_cache.get(f'{self.app_name}.bootstrap') if cache else None
                             if cache_object:
                                 return cache_object
@@ -499,13 +454,10 @@ class NetBoxBase:
                         If cache is True, but not a bootstrap object: it will check if the object is in the cache using the hash key.
                         If not, it will get the object from the NetBox API and then cache it for future requests.
                         '''
-                        #print('object is not bootstrap, but cached enabled')
                         try:
                             hashed_key = self._generate_hash(data=dict(unique_together_json))
-                            #print('hashed_key', hashed_key)
                             cache_object = global_cache.get(f'{self.app_name}.{hashed_key}') if cache else None
                             if cache_object:
-                                #print('cache_object found')
                                 self.result = cache_object
                                 self.id = cache_object.get('id', None)
                                 self.json = cache_object
@@ -513,7 +465,6 @@ class NetBoxBase:
                             
                             get_object = self.schema(**dict(self.object.get(**kwargs))).model_dump()
                             if get_object:
-                                #print('get_object found, caching it.')
                                 global_cache.set(
                                     key=f'{self.app_name}.{hashed_key}',
                                     value=get_object
@@ -579,6 +530,10 @@ class NetBoxBase:
         is_bootstrap: bool = False,
         **kwargs,
     ):
+        '''
+        Create a new object in NetBox.
+        '''
+        
         unique_together_json = {}
         # Check for missing obrigatory fields
         for field in self.unique_together:
@@ -597,10 +552,7 @@ class NetBoxBase:
                     return cache_object
                 
         except Exception as error:
-            raise FastAPIException(
-                message=f"Error to check bootstrap object '{self.app}.{self.name}' on cache.",
-                python_exception=str(error)
-            )
+            raise FastAPIException(message=f"Error to check bootstrap object '{self.app}.{self.name}' on cache.", python_exception=str(error))
         
         try:
             # Check if object already exists
@@ -624,7 +576,7 @@ class NetBoxBase:
             #if self.schema:
             #    return self.schema(**result) if type(result) == dict else result
 
-            print(f'[{self.app}.{self.name}] self.schema not found, returning raw JSON (dict)')
+            logger.info(f'[{self.app}.{self.name}] self.schema not found, returning raw JSON (dict)')
             return result
 
         except FastAPIException:
@@ -639,12 +591,13 @@ class NetBoxBase:
  
     
     def update(self, id: int, json: dict):
+        '''
+        Update an object in NetBox.
+        '''
+        
         try:
             if self.object.get(id).update(json):
-                raise FastAPIException(
-                    message=f'Object {self.app}.{self.name} with ID {id} changed successfully.',
-                    status_code=200
-                )
+                raise FastAPIException(message=f'Object {self.app}.{self.name} with ID {id} changed successfully.', status_code=200)
             else:
                 raise FastAPIException(
                     message=f'Object {self.app}.{self.name} with ID {id} not found or change (PUT) failed.',
